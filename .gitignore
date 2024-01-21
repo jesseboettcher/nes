@@ -1,3 +1,14 @@
+# git
+.git
+
+# Mac
+.DS_Store
+._*
+
+# build files
+bazel-*
+linux/build-*/
+
 # Prerequisites
 *.d
 

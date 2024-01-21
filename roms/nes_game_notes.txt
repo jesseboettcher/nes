@@ -1,0 +1,28 @@
+nes game notes
+
+
+rom notes
+https://www.nesdev.org/wiki/SxROM
+
+
+donkey kong
+---
+enables NMI on PPU and then waits for the interrupt
+Soon after NMI, the top of the bottom of the stack is set to zeros
+Later an RTS call interprets the 0x00 as a BRK which ends up in the vector table and failing on an unknown instruction 0xD2
+
+## modifies stack
+0xFA52    LDX #oper: 0xA2 0x00
+0xFA54    STX oper: 0x86 0xFF
+0xFA56    STX oper: 0x86 0xFE
+0xFA58    STX oper: 0x86 0xFD
+
+resolution
+- stack was in wrong place, 0x00FF instead of 0x01FF
+- indexed indirect (y) addresses were translated incorrectly
+- tsx and related ops were modifying stack not stack ptr
+
+
+zelda
+–––––
+SNROM - https://www.nesdev.org/wiki/SxROM
