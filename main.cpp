@@ -4,6 +4,9 @@
 
 #include <glog/logging.h>
 
+void run_6502_tests();
+
+
 int main(int argc, char *argv[])
 {
 	google::InitGoogleLogging(argv[0]);
@@ -11,6 +14,9 @@ int main(int argc, char *argv[])
 	FLAGS_minloglevel = google::INFO;
 
 	std::unique_ptr<NesFileParser> cartridge;
+
+    run_6502_tests();
+    return 0;
 
 	if (argc == 2)
 	{

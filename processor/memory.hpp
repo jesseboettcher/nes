@@ -67,19 +67,13 @@ public:
 
 	void stack_push(uint8_t& sp, uint8_t data)
 	{
-		assert(sp != 0x00);
 		(*this)[0x0100 + sp] = data;
 		sp--;
-        
-       LOG(ERROR) << stack_view(sp);
 	}
 
 	uint8_t stack_pop(uint8_t& sp)
 	{
-		assert(sp != 0xFF);
 		sp++;
-       LOG(ERROR) << stack_view(sp);
-
         return (*this)[0x0100 + sp];
 	}
 

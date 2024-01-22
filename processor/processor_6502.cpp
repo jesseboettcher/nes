@@ -14,10 +14,10 @@ Processor6502::Processor6502()
 
     instr_table_ = make_instruction_table();
     
-    log_.open("/home/jesse/Downloads/vnes.log");
+    log_.open("/tmp/vnes.log");
     if (!log_.is_open())
     {
-        assert(false);
+        LOG(WARNING) << "Could not write /tmp/vnes.log";
     }
 }
 
@@ -38,7 +38,7 @@ void Processor6502::reset()
     registers_.SP = 0xFF; // init stack pointer to the top of page 1
     registers_.set_SR(0);
 
-    print_status();
+    // print_status();
 }
 
 void Processor6502::run()
@@ -155,23 +155,34 @@ void Processor6502::calculate_instruction_address(Instruction& i)
 			break;
 
 		case AddressingMode::INDIRECT:
-			addr = i.values[1];
+		{
+			addr = (static_cast<uint16_t>(i.values[2]) << 8) | static_cast<uint16_t>(i.values[1]);
+
+			// In the 6502, the when low byte is incremented for a JMP, the carry is not handled
+			// and the low byte wraps to 0x00 without affecting the high byte
+			uint16_t inc_addr = 0;
+			inc_addr |= (static_cast<uint16_t>(i.values[2]) << 8) & 0xFF00;
+			inc_addr |= (static_cast<uint8_t>(i.values[1]) + 1) & 0x00FF;
+
 			i.values[1] = memory_[addr];
-			i.values[2] = memory_[addr + 1];
+			i.values[2] = memory_[inc_addr];
+
 			break;
+		}
 
 		case AddressingMode::INDIRECT_X:
 			// Indexed indirect - op data indicates a table of pointers in the zero page. The
 			// different pointers in the table are indexed via the X register
-			addr = i.values[1] + registers_.X;
+
+			addr = static_cast<uint8_t>(i.values[1] + registers_.X); // truncate addr to 1 byte
 			i.values[1] = memory_[addr];
-			i.values[2] = memory_[addr + 1];
+			i.values[2] = memory_[static_cast<uint8_t>(addr + 1)]; // truncate addr to 1 byte
 			break;
 
 		case AddressingMode::INDIRECT_Y:
 			// Indirect indexed - op data specifies a pointer to an address which contains a table
 			// of pointers. This pointers are indexed via the Y register
-			addr = (memory_[i.values[1] + 1]) << 8;
+			addr = (memory_[static_cast<uint8_t>(i.values[1] + 1)]) << 8; // truncate addr to 1 byte
 			addr |= memory_[i.values[1]];
 
 			if ((addr & 0xFF00) != ((addr + registers_.Y) & 0xFF00))
@@ -219,9 +230,9 @@ uint8_t Processor6502::execute_instruction(const Instruction& i)
 		LOG(ERROR) << "Unknown instruction: " << i;
 		throw "Unimplemented instruction";
 	}
-	std::cout << cycle_count_ << "\t"
-             << "0x" << std::hex << std::uppercase << registers_.PC << "    "
-			  << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
+	// std::cout << cycle_count_ << "\t"
+    //          << "0x" << std::hex << std::uppercase << registers_.PC << "    "
+	// 		  << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
 
     log_ << cycle_count_ << "\t"
          << "0x" << std::hex << std::uppercase << registers_.PC << "    "

@@ -191,7 +191,9 @@ public:
 protected:
 	friend class CartridgeInterface;
 	friend class NesPPU;
+	friend class Test6502;
 	Memory& memory() { return memory_; }
+	Registers& registers() { return registers_; }
 
 	void set_non_maskable_interrupt() { non_maskable_interrupt_ = true; }
 

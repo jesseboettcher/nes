@@ -2,8 +2,8 @@
 
 ## with Bazel (headless)
 
-bazel build //:app
-bazel run //:app /Users/jesse/code/nes/roms/donkey_kong.nes
+bazel build --cxxopt='-std=c++20' //:app
+bazel run --cxxopt='-std=c++20' //:app /Users/jesse/code/nes/roms/donkey_kong.nes
 
 ## Linux
 

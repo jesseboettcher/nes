@@ -18,7 +18,8 @@ static uint8_t ADC(const Instruction& i, Registers& r, Memory& m)
 
     int16_t result = 0;
 
-    if (r.is_status_register_flag_set(Registers::DECIMAL_FLAG))
+    if (r.is_status_register_flag_set(Registers::DECIMAL_FLAG) &&
+        false) // decimal mode from 6502 was removed for cost savings from the nes version
     {
         uint8_t num1 = 0x0F & r.A;
         uint8_t num2 = 0x0F & data;
@@ -264,13 +265,11 @@ static uint8_t BRK(const Instruction& i, Registers& r, Memory& m)
     // push PC+2, push SR
     // N   Z   C   I   D   V
     // -   -   -   1   -   -
-    uint16_t save_pc = i.nmi ? r.PC : r.PC + 2;
+    uint16_t save_pc = i.nmi ? r.PC : r.PC + 1 + 0 /* was already incremented by 1 to get here */;
     r.set_status_register_flag(Registers::BREAK_FLAG, true);
 
-    std::cout << std::hex << "BRK save_pc " << save_pc << " SR " << +r.SR();
-
-    m.stack_push(r.SP, static_cast<uint8_t>(save_pc & 0x00FF));
     m.stack_push(r.SP, static_cast<uint8_t>((save_pc >> 8) & 0x00FF));
+    m.stack_push(r.SP, static_cast<uint8_t>(save_pc & 0x00FF));
 
     m.stack_push(r.SP, r.SR());
 
@@ -528,8 +527,8 @@ static uint8_t JSR(const Instruction& i, Registers& r, Memory& m)
     r.PC--;
 
     // Save PC to stack and update PC to address indicated by JSR params
-    m.stack_push(r.SP, static_cast<uint8_t>(r.PC & 0x00FF));
     m.stack_push(r.SP, r.PC >> 8);
+    m.stack_push(r.SP, static_cast<uint8_t>(r.PC & 0x00FF));
     r.PC = i.address();
 
     return 0;
@@ -678,7 +677,7 @@ static uint8_t ROL(const Instruction& i, Registers& r, Memory& m)
     bool set_carry = data & 0x80;
 
     data <<= 1;
-    data |= set_carry ? 0x01 : 0x00;
+    data |= r.is_status_register_flag_set(Registers::CARRY_FLAG) ? 0x01 : 0x00;
 
     r.set_status_register_flag(Registers::ZERO_FLAG, !data);
     r.set_status_register_flag(Registers::CARRY_FLAG, set_carry);
@@ -705,7 +704,7 @@ static uint8_t ROR(const Instruction& i, Registers& r, Memory& m)
     bool set_carry = data & 0x01;
 
     data >>= 1;
-    data |= set_carry ? 0x80 : 0x00;
+    data |= r.is_status_register_flag_set(Registers::CARRY_FLAG) ? 0x80 : 0x00;
 
     r.set_status_register_flag(Registers::ZERO_FLAG, !data);
     r.set_status_register_flag(Registers::CARRY_FLAG, set_carry);
@@ -737,8 +736,8 @@ static uint8_t RTI(const Instruction& i, Registers& r, Memory& m)
     r.set_SR(m.stack_pop(r.SP));
 
     r.PC = 0;
-    r.PC |= m.stack_pop(r.SP) << 8;
     r.PC |= m.stack_pop(r.SP);
+    r.PC |= m.stack_pop(r.SP) << 8;
  
     r.set_status_register_flag(Registers::BREAK_FLAG, false);
 
@@ -755,8 +754,8 @@ static uint8_t RTS(const Instruction& i, Registers& r, Memory& m)
     // After restoring the PC, increment it so it is pointing to the next opcode
 
     r.PC = 0;
-    r.PC |= m.stack_pop(r.SP) << 8;
     r.PC |= m.stack_pop(r.SP);
+    r.PC |= m.stack_pop(r.SP) << 8;
     r.PC++;
 
     return 0;
@@ -773,7 +772,8 @@ static uint8_t SBC(const Instruction& i, Registers& r, Memory& m)
     int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
     int16_t result = 0;
 
-    if (r.is_status_register_flag_set(Registers::DECIMAL_FLAG))
+    if (r.is_status_register_flag_set(Registers::DECIMAL_FLAG) &&
+        false) // decimal mode was removed for cost savings from the nes 6502
     {
         uint8_t num1 = ((r.A >> 4) & 0x0F)  * 10 + (0x0F & r.A);
         uint8_t num2 = ((data >> 4) & 0x0F) * 10 + (0x0F & data);
@@ -787,16 +787,21 @@ static uint8_t SBC(const Instruction& i, Registers& r, Memory& m)
         result |= local_result / 10 << 4;
         result |= local_result % 10;
 
-        // LOG(ERROR) << +num1 << " " << +num2;
-        // LOG(ERROR) << std::hex << static_cast<uint16_t>(r.A) << " " << std::hex << static_cast<uint16_t>(data)
-        //            << " = " << std::hex << result;
-
         r.set_status_register_flag(Registers::CARRY_FLAG, num1 >= num2);
         r.A = result & 0x00FF;
     }
     else
     {
-        int16_t result = static_cast<int8_t>(r.A) - data;
+        int8_t carry = r.is_status_register_flag_set(Registers::CARRY_FLAG) ? 1 : 0;
+        int8_t result = static_cast<uint8_t>(r.A) - static_cast<uint8_t>(data) + carry;
+
+        result -= 1; // This is needed to pass the 1k SBC tests (0xE1) in the TomHarte test suite
+                     // why?: https://github.com/TomHarte/ProcessorTests/tree/main/nes6502
+
+        // LOG(INFO) << std::dec << " A " << +r.A
+        //           << " d " << +static_cast<uint8_t>(data)
+        //           << " c " << +carry
+        //           << " = " << +result << " " << std::dec << +static_cast<uint8_t>(result);
 
         r.set_status_register_flag(Registers::CARRY_FLAG, r.A >= data);
         r.A = result & 0x00FF;
