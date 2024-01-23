@@ -42,5 +42,4 @@ void MenuHandler::run_command()
 {
     qDebug() << "run_command";
     CommandPrompt::instance().write_command("run");
-    // Your action code here
 }
