@@ -6,19 +6,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Quick)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets)
 
 qt_standard_project_setup()
 qt_policy(SET QTP0001 OLD)
 
 qt_add_executable(appnes_qt
-    main.cpp view_update_relay.hpp
+    main.cpp view_update_relay.hpp menu_handler.hpp menu_handler.cpp
 )
 
 target_include_directories(appnes_qt
     PRIVATE ../../
 )
 include_directories(../../io)
-include_directories(../../external)
+include_directories(../../lib)
 
 
 qt_add_qml_module(appnes_qt
@@ -27,7 +28,6 @@ qt_add_qml_module(appnes_qt
     QML_FILES Main.qml
     SOURCES ../../config/flags.hpp ../../io/cartridge_interface.cpp ../../io/cartridge_interface.hpp ../../io/display.hpp ../../io/files.cpp ../../io/files.hpp  ../../io/prompt.cpp ../../io/prompt.hpp ../../processor/instructions.cpp ../../processor/instructions.hpp ../../processor/memory.hpp ../../processor/nes_ppu.cpp ../../processor/nes_ppu.hpp ../../processor/processor_6502.cpp ../../processor/processor_6502.hpp ../../processor/utils.cpp ../../processor/utils.hpp ../../processor/video_memory.hpp ../../system/nes.cpp ../../system/nes.hpp
     SOURCES ../../io/linux_display.cpp
-    SOURCES ../../test/6502_tests.cpp
 )
 
 # add and configure glog
@@ -47,7 +47,7 @@ set_target_properties(appnes_qt PROPERTIES
 )
 
 target_link_libraries(appnes_qt
-    PRIVATE Qt6::Quick
+    PRIVATE Qt6::Quick Qt6::Widgets
 )
 
 include(GNUInstallDirs)

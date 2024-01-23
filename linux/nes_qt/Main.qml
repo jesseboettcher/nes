@@ -6,7 +6,7 @@ Window {
     width: 512
     height: 480
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("Nintendo Entertainment System")
 
     Rectangle
     {
@@ -33,6 +33,7 @@ Window {
             MenuItem
             {
                 text: qsTr("Load ROM...")
+                onTriggered: menu_handler.load_rom();
             }
         }
         Menu
@@ -42,6 +43,7 @@ Window {
             MenuItem
             {
                 text: qsTr("Run Command...")
+                onTriggered: menu_handler.run_command();
             }
         }
     }

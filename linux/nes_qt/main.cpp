@@ -1,45 +1,29 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 
 #include <memory>
 
-#include "io/cartridge_interface.hpp"
 #include "io/display.hpp"
-#include "io/prompt.hpp"
+#include "linux/nes_qt/menu_handler.hpp"
 #include "system/callbacks.hpp"
 #include "system/nes.hpp"
 
-std::unique_ptr<Nes> nes_;
-std::thread* vm_thread_;
-
-void run_6502_tests();
+std::shared_ptr<Nes> nes_;
 
 void connect_nes_refresh_callback(std::function<void()> callback)
 {
     nes_->display().set_refresh_callback(callback);
 }
 
-void start_nes()
-{
-    std::unique_ptr<NesFileParser> cartridge;
-
-    std::filesystem::path path("/home/jesse/code/nes/roms/donkey_kong.nes");
-    cartridge = std::make_unique<NesFileParser>(path);
-
-    nes_->load_cartridge(std::move(cartridge));
-
-    vm_thread_ = new std::thread([]{ CommandPrompt::instance().launch_prompt(*nes_); });
-}
-
 int main(int argc, char *argv[])
 {
     // Launch NES - nes needs to be created first because the QT NesDisplayView installs its
     // refresh callback in the constructor
-    nes_ = std::make_unique<Nes>(nullptr);
-    start_nes();
+    nes_ = std::make_shared<Nes>(nullptr);
 
     // Create and start QTApp
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
+    MenuHandler menu_handler(nes_);
 
     qmlRegisterType<NesDisplayView>("com.boettcher.jesse", 0, 1, "NesDisplayView");
 
@@ -53,10 +37,7 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
     engine.load(url);
 
+    engine.rootContext()->setContextProperty("menu_handler", &menu_handler);
 
-    // CommandPrompt::instance().write_command("run");
-    run_6502_tests();
-    return 0;
-
-    // return app.exec();
+    return app.exec();
 }
