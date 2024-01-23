@@ -7,7 +7,7 @@
 
 # build files
 bazel-*
-linux/build-*/
+build-*/
 CMakeLists.txt.user
 
 # Prerequisites

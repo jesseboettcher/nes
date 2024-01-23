@@ -1,4 +1,4 @@
-#include "linux/nes_qt/menu_handler.hpp"
+#include "platform/menu_handler.hpp"
 
 #include "io/cartridge_interface.hpp"
 #include "io/prompt.hpp"

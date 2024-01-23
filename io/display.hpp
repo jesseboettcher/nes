@@ -7,7 +7,7 @@
 
 #if DISPLAY_TYPE == DISPLAY_LINUX
 
-#include "linux/nes_qt/view_update_relay.hpp"
+#include "platform/view_update_relay.hpp"
 
 #include <QtQuick>
 #include <QQuickPaintedItem>

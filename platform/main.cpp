@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "io/display.hpp"
-#include "linux/nes_qt/menu_handler.hpp"
+#include "platform/menu_handler.hpp"
 #include "system/callbacks.hpp"
 #include "system/nes.hpp"
 
