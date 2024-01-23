@@ -14,7 +14,8 @@ public:
 public slots:
     void load_rom();
 
-    void run_command();
+    void run();
+    void command();
 
 private:
 	void start_nes(std::filesystem::path path);

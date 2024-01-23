@@ -27,7 +27,7 @@ void MenuHandler::load_rom()
     QString fileName = QFileDialog::getOpenFileName(
         nullptr,
         tr("Select a Nes ROM"),
-        "~/",
+        QDir::homePath(),
         tr("Nes ROMs (*.nes)")
     );
 
@@ -38,8 +38,13 @@ void MenuHandler::load_rom()
 
 }
 
-void MenuHandler::run_command()
+void MenuHandler::run()
 {
-    qDebug() << "run_command";
+    qDebug() << "run";
     CommandPrompt::instance().write_command("run");
+}
+
+void MenuHandler::command()
+{
+    qDebug() << "command";
 }
