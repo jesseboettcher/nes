@@ -14,6 +14,7 @@ class Nes
 public:
     enum class State
     {
+    	OFF,
         IDLE,
         RUNNING,
     };
@@ -47,6 +48,8 @@ protected:
 
 private:
     void check_timer();
+
+    void update_state(State state);
     
     std::unique_ptr<NesFileParser> cartridge_;
 

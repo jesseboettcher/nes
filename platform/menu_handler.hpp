@@ -15,6 +15,8 @@ public slots:
     void load_rom();
 
     void run();
+    void step();
+    void stop();
     void command();
 
 private:

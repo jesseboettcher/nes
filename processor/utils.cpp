@@ -9,11 +9,11 @@ std::ostream& operator << (std::ostream& os, const Instruction& i)
 
 	if (i.values.size() >= 2)
 	{
-		os	<< " 0x" << std::setw(2) << +i.values[1];
+		os	<< " 0x" << std::setw(2) << std::setfill('0') << +i.values[1];
 	}
 	if (i.values.size() == 3)
 	{
-		os	<< " 0x" << std::setw(2) << +i.values[2];
+		os	<< " 0x" << std::setw(2) << std::setfill('0') << +i.values[2];
 	}
 	return os;
 }

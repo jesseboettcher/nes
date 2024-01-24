@@ -1,9 +1,11 @@
 #include "processor_6502.hpp"
 
 #include "processor/utils.hpp"
+#include "platform/ui_properties.hpp"
 
 #include <iomanip>
 #include <iostream>
+#include <format>
 #include <regex>
 #include <sstream>
 #include <thread>
@@ -38,7 +40,7 @@ void Processor6502::reset()
     registers_.SP = 0xFF; // init stack pointer to the top of page 1
     registers_.set_SR(0);
 
-    // print_status();
+    print_status();
 }
 
 void Processor6502::run()
@@ -112,7 +114,7 @@ void Processor6502::calculate_instruction_address(Instruction& i)
 	// update it.
 	i.addr_mode = instr_table_[i.opcode()].addr_mode;
 
-    uint16_t addr;
+    uint16_t addr = 0;
 	switch(i.addr_mode)
 	{
 		case AddressingMode::ABSOLUTE:
@@ -230,9 +232,17 @@ uint8_t Processor6502::execute_instruction(const Instruction& i)
 		LOG(ERROR) << "Unknown instruction: " << i;
 		throw "Unimplemented instruction";
 	}
-	// std::cout << cycle_count_ << "\t"
-    //          << "0x" << std::hex << std::uppercase << registers_.PC << "    "
-	// 		  << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
+
+	if (verbose())
+	{
+		// std::cout << cycle_count_ << "\t"
+	    //          << "0x0" << std::hex << std::uppercase << registers_.PC << "    "
+		// 		  << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
+
+		std::stringstream str;
+		str << instr_table_[i.opcode()].assembler << ":" << i;
+		update_ui(UI::current_instruction_label, str.str());
+	}
 
     log_ << cycle_count_ << "\t"
          << "0x" << std::hex << std::uppercase << registers_.PC << "    "
@@ -390,9 +400,24 @@ void Processor6502::wait_for_cycle_count(uint8_t cycles)
 
 void Processor6502::print_status()
 {
-	std::cout << "PC: 0x" << std::hex << std::uppercase << registers_.PC
-			  << "    " << std::hex << std::setfill('0') << std::setw(2) << +memory_[registers_.PC]
-			  << "      (cycle " << std::dec << cycle_count_ << ")" << std::endl;
+	// std::cout << "PC: 0x" << std::hex << std::uppercase << registers_.PC
+	// 		  << "    " << std::hex << std::setfill('0') << std::setw(2) << +memory_[registers_.PC]
+	// 		  << "      (cycle " << std::dec << cycle_count_ << ")" << std::endl;
+
+    update_ui(UI::pc_label,    strformat("0x%04X", registers_.PC), UI_BLACK);
+    update_ui(UI::a_reg_label, strformat("0x%04X", registers_.A), UI_BLACK);
+    update_ui(UI::x_reg_label, strformat("0x%04X", registers_.X), UI_BLACK);
+    update_ui(UI::y_reg_label, strformat("0x%04X", registers_.Y), UI_BLACK);
+    update_ui(UI::sp_reg_label, strformat("0x%04X", registers_.SP), UI_BLACK);
+}
+
+void Processor6502::dim_status()
+{
+    update_ui(UI::pc_label,    std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::a_reg_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::x_reg_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::y_reg_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::sp_reg_label, std::nullopt, UI_LIGHT_GREY);
 }
 
 void Processor6502::print_memory(uint16_t address, uint16_t size) const

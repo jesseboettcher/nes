@@ -12,7 +12,7 @@ qt_standard_project_setup()
 qt_policy(SET QTP0001 OLD)
 
 qt_add_executable(appnes_qt
-    main.cpp view_update_relay.hpp menu_handler.hpp menu_handler.cpp
+    main.cpp view_update_relay.hpp menu_handler.hpp menu_handler.cpp text_controller.hpp ui_properties.cpp
 )
 
 target_include_directories(appnes_qt
@@ -25,7 +25,7 @@ include_directories(../lib)
 qt_add_qml_module(appnes_qt
     URI nes_qt
     VERSION 1.0
-    QML_FILES main.qml controls.qml
+    QML_FILES main.qml registers.qml
     SOURCES ../config/flags.hpp ../io/cartridge_interface.cpp ../io/cartridge_interface.hpp ../io/display.hpp ../io/files.cpp ../io/files.hpp  ../io/prompt.cpp ../io/prompt.hpp ../processor/instructions.cpp ../processor/instructions.hpp ../processor/memory.hpp ../processor/nes_ppu.cpp ../processor/nes_ppu.hpp ../processor/processor_6502.cpp ../processor/processor_6502.hpp ../processor/utils.cpp ../processor/utils.hpp ../processor/video_memory.hpp ../system/nes.cpp ../system/nes.hpp
     SOURCES ../io/linux_display.cpp
 )

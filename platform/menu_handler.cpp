@@ -14,7 +14,6 @@ void MenuHandler::start_nes(std::filesystem::path path)
 {
     std::unique_ptr<NesFileParser> cartridge;
 
-    // std::filesystem::path path("/home/jesse/code/nes/roms/donkey_kong.nes");
     cartridge = std::make_unique<NesFileParser>(path);
 
     nes_->load_cartridge(std::move(cartridge));
@@ -24,6 +23,12 @@ void MenuHandler::start_nes(std::filesystem::path path)
 
 void MenuHandler::load_rom()
 {
+    // DEBUG ITERATION SPEED
+    std::filesystem::path path("/Users/jesse/code/nes/roms/donkey_kong.nes");
+    start_nes(path);
+    return;
+    ///////
+
     QString fileName = QFileDialog::getOpenFileName(
         nullptr,
         tr("Select a Nes ROM"),
@@ -40,8 +45,17 @@ void MenuHandler::load_rom()
 
 void MenuHandler::run()
 {
-    qDebug() << "run";
     CommandPrompt::instance().write_command("run");
+}
+
+void MenuHandler::step()
+{
+    CommandPrompt::instance().write_command("step");
+}
+
+void MenuHandler::stop()
+{
+    nes_->user_interrupt();
 }
 
 void MenuHandler::command()

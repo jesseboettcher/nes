@@ -172,7 +172,11 @@ public:
 	void clear_watchpoint(const uint16_t address);
 	bool check_watchpoints(const Instruction& i);
 
+	void set_verbose(bool verbose) { verbose_ = verbose; }
+	bool verbose() { return verbose_; }
+
 	void print_status();
+	void dim_status();
 	void print_memory(uint16_t address, uint16_t size) const;
 	void print_stack() const;
 	void print_registers();
@@ -213,6 +217,7 @@ private:
 	Instruction pending_operation_;
 	uint64_t	cycle_count_{0};
 	uint64_t	instr_count_{0};
+	bool verbose_{true};
 
 	int32_t cycles_to_wait_{0};
 

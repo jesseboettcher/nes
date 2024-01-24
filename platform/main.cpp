@@ -1,11 +1,14 @@
 #include "io/display.hpp"
 #include "platform/menu_handler.hpp"
+#include "platform/text_controller.hpp"
 #include "system/callbacks.hpp"
 #include "system/nes.hpp"
 
 #include <QApplication>
+#include <QBoxLayout>
 #include <QKeySequence>
 #include <QMainWindow>
+#include <QLabel>
 #include <QMenuBar>
 #include <QQmlApplicationEngine>
 
@@ -45,6 +48,19 @@ void configure_main_window(QMainWindow& main_window)
     main_window.setCentralWidget(container);
 }
 
+void configure_registers_window(QQmlApplicationEngine& engine, QMainWindow& main_window)
+{
+    QQmlComponent registers_component(&engine, QUrl(QStringLiteral("qrc:/nes_qt/registers.qml")));
+    QObject* registers_object = registers_component.create();
+
+    QWindow* registers_window = qobject_cast<QWindow*>(registers_object);
+    assert(registers_window);
+
+    QRect main_rect = main_window.geometry();
+    registers_window->setX(main_rect.x() + main_rect.width() + 20);
+    registers_window->setY(main_rect.y());
+}
+
 QMenuBar* create_menus(QMainWindow& main_window, MenuHandler& menu_handler)
 {
     QMenuBar* menu_bar = nullptr;
@@ -64,16 +80,26 @@ QMenuBar* create_menus(QMainWindow& main_window, MenuHandler& menu_handler)
     QAction *run_action = new QAction("Run", menu_bar);
     run_action->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_R));
 
+    QAction *step_action = new QAction("Step", menu_bar);
+    step_action->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_T));
+
+    QAction *stop_action = new QAction("Stop", menu_bar);
+    stop_action->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_C));
+
     QAction *open_action = new QAction("Open ROM...", menu_bar);
     open_action->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_O));
 
     file_menu->addAction(open_action);
     debug_menu->addAction(run_action);
+    debug_menu->addAction(step_action);
+    debug_menu->addAction(stop_action);
     debug_menu->addSeparator();
     debug_menu->addAction("Command..");
 
     QObject::connect(open_action, &QAction::triggered, &menu_handler, &MenuHandler::load_rom);
     QObject::connect(run_action,  &QAction::triggered, &menu_handler, &MenuHandler::run);
+    QObject::connect(step_action,  &QAction::triggered, &menu_handler, &MenuHandler::step);
+    QObject::connect(stop_action,  &QAction::triggered, &menu_handler, &MenuHandler::stop);
 
     return menu_bar;
 }
@@ -97,12 +123,15 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    // const QUrl ctrl_window_qml(u"qrc:/nes_qt/controls.qml"_qs);
-    // engine.load(ctrl_window_qml);
-
     // Create the main window
     QMainWindow main_window;
     configure_main_window(main_window);
+
+    // Debug window
+    TextController& textController = TextController::instance();
+    engine.rootContext()->setContextProperty("TextController", &textController);
+
+    configure_registers_window(engine, main_window);
 
     // Add menus to the menu bar
     MenuHandler menu_handler(nes_);

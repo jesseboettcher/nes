@@ -1,5 +1,7 @@
 #include "nes.hpp"
 
+#include "platform/ui_properties.hpp"
+
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -16,6 +18,8 @@ Nes::Nes(std::unique_ptr<NesFileParser> cartridge)
 
     load_cartridge(std::move(cartridge));
 	display_.init();
+
+    update_state(State::OFF);
 }
 
 Nes::~Nes()
@@ -36,12 +40,12 @@ void Nes::load_cartridge(std::unique_ptr<NesFileParser> cartridge)
     }
     processor_.reset();
     
-//    processor_.breakpoint(0xE261);
+    update_state(State::IDLE);
 }
 
 void Nes::run_continuous()
 {
-    state_ = State::RUNNING;
+    update_state(State::RUNNING);
 
     while (!should_exit_)
 	{
@@ -52,12 +56,12 @@ void Nes::run_continuous()
         check_timer();
 	}
     should_exit_ = false;
-    state_ = State::IDLE;
+    update_state(State::IDLE);
 }
 
 void Nes::run()
 {
-    state_ = State::RUNNING;
+    update_state(State::RUNNING);
     
     while (!should_exit_)
 	{
@@ -66,14 +70,9 @@ void Nes::run()
 			break;
 		}
         check_timer();
-//        if (processor_.cycle_count() == 1789774) // DEBUG rendering of game screen
-//        {
-//            LOG(ERROR) << "BREAK";
-//        	break;
-//        }
 	}
     should_exit_ = false;
-    state_ = State::IDLE;
+    update_state(State::IDLE);
 }
 
 bool Nes::step()
@@ -101,6 +100,7 @@ void Nes::step_cpu_instruction()
 	{
 		should_continue = step();
 	}
+    processor_.print_status();
 }
 
 void Nes::user_interrupt()
@@ -131,5 +131,27 @@ void Nes::check_timer()
         std::cout << (100.0 * 1000.0 / delta.count()) << std::dec << "% of realtime" << " cycle " << processor_.cycle_count() << std::endl;
         start_time = std::chrono::high_resolution_clock::now();
         last_cycle_count = processor_.cycle_count();
+    }
+}
+
+void Nes::update_state(State state)
+{
+    State old_state = state_;
+
+    state_ = state;
+    const char * color = state_ == State::RUNNING ? "#4F8F00" : "#00000";
+    update_ui(UI::state_label, magic_enum::enum_name<State>(state), color);
+
+    processor_.set_verbose(state_ == State::IDLE);
+
+    if (old_state == State::RUNNING)
+    {
+        processor_.print_status();
+        update_ui(UI::current_instruction_label, "");
+    }
+    else if (state_ == State::RUNNING)
+    {
+        processor_.dim_status();
+        update_ui(UI::current_instruction_label, "");
     }
 }

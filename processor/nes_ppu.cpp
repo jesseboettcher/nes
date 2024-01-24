@@ -338,7 +338,7 @@ void NesPPU::handle_oam_dma_register()
         {
             oam_memory_[i] = processor_.cmemory()[oam_src_addr + i];
         }
-        LOG(ERROR) << "OAMDMA " << std::hex << "0x" << oam_src_addr;
+        // LOG(ERROR) << "OAMDMA " << std::hex << "0x" << oam_src_addr;
         for (uint16_t i = 0;i < 64;i++)
         {
             Sprite s = sprite(i);
@@ -346,7 +346,7 @@ void NesPPU::handle_oam_dma_register()
             {
                 continue;
             }
-            std::cout << "sprite " << i << ": " << s << std::endl;
+            // std::cout << "sprite " << i << ": " << s << std::endl;
         }
     }
 }
