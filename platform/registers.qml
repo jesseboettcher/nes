@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-ApplicationWindow
+Window
 {
     id: registers_window
     objectName: "registers_window"
@@ -28,8 +28,8 @@ ApplicationWindow
         {
             if (element.textKey === key)
             {
-                element.text = TextController.get_text(key);
-                element.color = TextController.get_color(key);
+                element.text = UIController.get_text(key);
+                element.color = UIController.get_color(key);
             }
         }
     }
@@ -108,9 +108,9 @@ ApplicationWindow
             font.bold: true
             color: "#000000"
             font.family: defaultFontFamily
-            text: TextController.get_text(state_label.textKey)
+            text: UIController.get_text(state_label.textKey)
 
-            Component.onCompleted: { TextController.text_changed.connect(updateText) }
+            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }
 
         Text
@@ -121,9 +121,9 @@ ApplicationWindow
             y: 35
             font.bold: true
             font.family: defaultFontFamily
-            text: TextController.get_text(pc_label.textKey)
+            text: UIController.get_text(pc_label.textKey)
 
-            Component.onCompleted: { TextController.text_changed.connect(updateText) }
+            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }
         Text
         {
@@ -133,9 +133,9 @@ ApplicationWindow
             y: 55
             font.bold: true
             font.family: defaultFontFamily
-            text: TextController.get_text(a_reg_label.textKey)
+            text: UIController.get_text(a_reg_label.textKey)
 
-            Component.onCompleted: { TextController.text_changed.connect(updateText) }
+            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }
 
         Text
@@ -146,9 +146,9 @@ ApplicationWindow
             y: 75
             font.bold: true
             font.family: defaultFontFamily
-            text: TextController.get_text(x_reg_label.textKey)
+            text: UIController.get_text(x_reg_label.textKey)
 
-            Component.onCompleted: { TextController.text_changed.connect(updateText) }
+            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }
 
         Text
@@ -159,9 +159,9 @@ ApplicationWindow
             y: 95
             font.bold: true
             font.family: defaultFontFamily
-            text: TextController.get_text(y_reg_label.textKey)
+            text: UIController.get_text(y_reg_label.textKey)
 
-            Component.onCompleted: { TextController.text_changed.connect(updateText) }
+            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }
 
         Text
@@ -172,9 +172,9 @@ ApplicationWindow
             y: 115
             font.bold: true
             font.family: defaultFontFamily
-            text: TextController.get_text(sp_reg_label.textKey)
+            text: UIController.get_text(sp_reg_label.textKey)
 
-            Component.onCompleted: { TextController.text_changed.connect(updateText) }
+            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }
     }
     Text
@@ -186,8 +186,8 @@ ApplicationWindow
         y: 135
         font.bold: true
         font.family: defaultFontFamily
-        text: TextController.get_text(current_instruction_label.textKey)
+        text: UIController.get_text(current_instruction_label.textKey)
 
-        Component.onCompleted: { TextController.text_changed.connect(updateText) }
+        Component.onCompleted: { UIController.ui_changed.connect(updateText) }
     }
 }

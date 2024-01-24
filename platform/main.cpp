@@ -1,6 +1,6 @@
 #include "io/display.hpp"
 #include "platform/menu_handler.hpp"
-#include "platform/text_controller.hpp"
+#include "platform/ui_controller.hpp"
 #include "system/callbacks.hpp"
 #include "system/nes.hpp"
 
@@ -128,8 +128,8 @@ int main(int argc, char *argv[])
     configure_main_window(main_window);
 
     // Debug window
-    TextController& textController = TextController::instance();
-    engine.rootContext()->setContextProperty("TextController", &textController);
+    UIController& uiController = UIController::instance();
+    engine.rootContext()->setContextProperty("UIController", &uiController);
 
     configure_registers_window(engine, main_window);
 

@@ -5,20 +5,20 @@
 #include <QObject>
 #include <QMap>
 
-class TextController : public QObject
+class UIController : public QObject
 {
     Q_OBJECT
 
-    TextController()
+    UIController()
     {
     }
 
 public:
-    static TextController& instance()
+    static UIController& instance()
     {
-        static TextController* text_controller = new TextController();
+        static UIController* ui_controller = new UIController();
 
-        return *text_controller;
+        return *ui_controller;
     }
 
 
@@ -38,7 +38,7 @@ public:
         if (strings_[enum_key] != text)
         {
             strings_[enum_key] = text;
-            emit text_changed(key);
+            emit ui_changed(key);
         }
     }
 
@@ -48,14 +48,15 @@ public:
         if (colors_[enum_key] != text)
         {
             colors_[enum_key] = text;
-            emit text_changed(key);
+            emit ui_changed(key);
         }
     }
 
 signals:
-    void text_changed(const QString &key);
+    void ui_changed(const QString &key);
 
 private:
     QMap<UI, QString> strings_;
     QMap<UI, QString> colors_;
+    QMap<UI, double> opacities_;
 };

@@ -1,6 +1,6 @@
 #include "platform/ui_properties.hpp"
 
-#include "platform/text_controller.hpp"
+#include "platform/ui_controller.hpp"
 
 #include <glog/logging.h>
 
@@ -20,14 +20,14 @@ void update_ui(UI property, std::optional<std::string_view> str,
 {
 	if (str)
 	{
-		TextController::instance().set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
-										    QString::fromStdString(std::string(str.value())));
+		UIController::instance().set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
+										  QString::fromStdString(std::string(str.value())));
 	}
 
 	if (color)
 	{
-		TextController::instance().set_color(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
-										     QString::fromStdString(std::string(color.value())));
+		UIController::instance().set_color(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
+								           QString::fromStdString(std::string(color.value())));
 
 	}
 }
