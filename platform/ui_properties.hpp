@@ -17,6 +17,7 @@ enum class UI
 	sp_reg_label,
 	current_instruction_label,
 	state_label,
+	dimming_rect
 };
 
 static constexpr std::string_view UI_BLACK = "#000000";
@@ -27,5 +28,7 @@ UI ui_from_string(std::string s);
 
 void update_ui(UI property, std::optional<std::string_view> str,
 			                std::optional<std::string_view> color = std::nullopt);
+
+void update_ui_opacity(UI property, double opacity);
 
 #endif // __UI_PROPERTIES_H__

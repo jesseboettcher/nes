@@ -136,6 +136,11 @@ void Nes::check_timer()
 
 void Nes::update_state(State state)
 {
+    if (state == state_)
+    {
+        return;
+    }
+
     State old_state = state_;
 
     state_ = state;
@@ -144,14 +149,16 @@ void Nes::update_state(State state)
 
     processor_.set_verbose(state_ == State::IDLE);
 
-    if (old_state == State::RUNNING)
+    if (state_ == State::IDLE || state_ == State::OFF)
     {
         processor_.print_status();
         update_ui(UI::current_instruction_label, "");
+        update_ui_opacity(UI::dimming_rect, 0.3);
     }
     else if (state_ == State::RUNNING)
     {
         processor_.dim_status();
         update_ui(UI::current_instruction_label, "");
+        update_ui_opacity(UI::dimming_rect, 0.0);
     }
 }

@@ -31,3 +31,9 @@ void update_ui(UI property, std::optional<std::string_view> str,
 
 	}
 }
+
+void update_ui_opacity(UI property, double opacity)
+{
+    UIController::instance().set_opacity(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
+                                         opacity);
+}

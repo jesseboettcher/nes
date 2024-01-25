@@ -33,13 +33,14 @@ void connect_nes_refresh_callback(std::function<void()> callback)
     nes_->display().set_refresh_callback(callback);
 }
 
-void configure_main_window(QMainWindow& main_window)
+void configure_main_window(QMainWindow& main_window, UIController& uiController)
 {
     main_window.setWindowTitle(QObject::tr("Nintendo Entertainment System"));
     main_window.resize(512, 480);
     main_window.show();
 
     QQuickView *view = new QQuickView();
+    view->rootContext()->setContextProperty("UIController", &uiController);
     view->setSource(QUrl(QStringLiteral("qrc:/nes_qt/main.qml")));  // Replace with your QML file path
 
     QWidget *container = QWidget::createWindowContainer(view, &main_window);
@@ -123,14 +124,12 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    // Create the main window
-    QMainWindow main_window;
-    configure_main_window(main_window);
-
-    // Debug window
     UIController& uiController = UIController::instance();
     engine.rootContext()->setContextProperty("UIController", &uiController);
 
+    // Create windows
+    QMainWindow main_window;
+    configure_main_window(main_window, uiController);
     configure_registers_window(engine, main_window);
 
     // Add menus to the menu bar
