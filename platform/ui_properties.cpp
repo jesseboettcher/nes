@@ -1,6 +1,6 @@
 #include "platform/ui_properties.hpp"
 
-#include "platform/ui_controller.hpp"
+#include "platform/ui_context.hpp"
 
 #include <glog/logging.h>
 #include <iomanip>
@@ -19,24 +19,27 @@ UI ui_from_string(std::string s)
 void update_ui(UI property, std::optional<std::string_view> str,
 			                std::optional<std::string_view> color)
 {
+    UIContext& ui = UIContext::instance();
+
 	if (str)
 	{
-		UIController::instance().set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
-										  QString::fromStdString(std::string(str.value())));
+		ui.controller.set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
+							   QString::fromStdString(std::string(str.value())));
 	}
 
 	if (color)
 	{
-		UIController::instance().set_color(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
-								           QString::fromStdString(std::string(color.value())));
+		ui.controller.set_color(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
+					            QString::fromStdString(std::string(color.value())));
 
 	}
 }
 
 void update_ui_opacity(UI property, double opacity)
 {
-    UIController::instance().set_opacity(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
-                                         opacity);
+    UIContext& ui = UIContext::instance();
+    ui.controller.set_opacity(QString::fromStdString(std::string(magic_enum::enum_name<UI>(property))),
+                              opacity);
 }
 
 void update_ui_memory_view(const Memory& memory)
@@ -64,10 +67,16 @@ void update_ui_memory_view(const Memory& memory)
         }
     }
 
-    UIController::instance().set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(UI::memory_view))),
-                                      QString::fromStdString(memstr.str()));
+    UIContext& ui = UIContext::instance();
+
+    ui.controller.set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(UI::memory_view))),
+                           QString::fromStdString(memstr.str()));
+    ui.controller.set_color(QString::fromStdString(std::string(magic_enum::enum_name<UI>(UI::memory_view))),
+                           QString::fromStdString(std::string(UI_NEAR_BLACK)));
 
 
-    UIController::instance().set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(UI::address_view))),
-                                      QString::fromStdString(addrstr.str()));
+    ui.controller.set_text(QString::fromStdString(std::string(magic_enum::enum_name<UI>(UI::address_view))),
+                           QString::fromStdString(addrstr.str()));
+    ui.controller.set_color(QString::fromStdString(std::string(magic_enum::enum_name<UI>(UI::address_view))),
+                           QString::fromStdString(std::string(UI_LIGHT_BLACK)));
 }

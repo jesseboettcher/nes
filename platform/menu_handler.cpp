@@ -12,9 +12,8 @@
 
 std::thread* vm_thread_;
 
-MenuHandler::MenuHandler(std::shared_ptr<Nes>& nes, QWindow* memory_window)
+MenuHandler::MenuHandler()
     : QObject(nullptr)
-    , nes_(nes)
 {
 }
 
@@ -24,9 +23,9 @@ void MenuHandler::start_nes(std::filesystem::path path)
 
     cartridge = std::make_unique<NesFileParser>(path);
 
-    nes_->load_cartridge(std::move(cartridge));
+    UIContext::instance().nes->load_cartridge(std::move(cartridge));
 
-    vm_thread_ = new std::thread([this]{ CommandPrompt::instance().launch_prompt(*nes_); });
+    vm_thread_ = new std::thread([this]{ CommandPrompt::instance().launch_prompt(*UIContext::instance().nes); });
 }
 
 void MenuHandler::load_rom()
@@ -63,15 +62,16 @@ void MenuHandler::step()
 
 void MenuHandler::stop()
 {
-    nes_->user_interrupt();
+    UIContext::instance().nes->user_interrupt();
 }
 
 void MenuHandler::goto_memory()
 {
-    if (UIContext::instance().memory_window == nullptr)
+    if (not UIContext::instance().memory_window->isVisible())
     {
-        return;
+        show_memory();
     }
+
     QQuickItem* scroll_view_ = UIContext::instance().memory_window->findChild<QQuickItem*>("memory_scroll_view");
 
     QString text = QInputDialog::getText(
@@ -95,4 +95,34 @@ void MenuHandler::goto_memory()
 void MenuHandler::command()
 {
     qDebug() << "command";
+}
+
+void MenuHandler::show_registers()
+{
+    UIContext::instance().registers_window->show();
+    UIContext::instance().configure_registers_window();
+}
+
+void MenuHandler::show_memory()
+{
+    UIContext::instance().memory_window->show();
+    UIContext::instance().configure_memory_window();
+}
+
+void MenuHandler::close()
+{
+    if (UIContext::instance().registers_window && UIContext::instance().registers_window->isActive())
+    {
+        UIContext::instance().registers_window->close();
+    }
+    else if (UIContext::instance().memory_window && UIContext::instance().memory_window->isActive())
+    {
+        UIContext::instance().memory_window->close();
+    }
+    else if (UIContext::instance().main_window)
+    {
+        // there no isActive call for main window, but if it exists and the other windows are not
+        // active, it must be
+        UIContext::instance().main_window->close();
+    }
 }

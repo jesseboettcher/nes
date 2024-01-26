@@ -27,6 +27,7 @@ enum class UI
 
 static constexpr std::string_view UI_BLACK = "#000000";
 static constexpr std::string_view UI_NEAR_BLACK = "#455760";
+static constexpr std::string_view UI_LIGHT_BLACK = "#5F7784";
 static constexpr std::string_view UI_LIGHT_GREY = "#BBBBBB";
 
 std::string_view ui_to_string(UI property);

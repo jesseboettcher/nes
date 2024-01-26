@@ -19,7 +19,7 @@ public:
         RUNNING,
     };
     
-    Nes(std::unique_ptr<NesFileParser> cartridge);
+    Nes(std::unique_ptr<NesFileParser> cartridge = nullptr);
 	virtual ~Nes();
 
     void load_cartridge(std::unique_ptr<NesFileParser> cartridge);

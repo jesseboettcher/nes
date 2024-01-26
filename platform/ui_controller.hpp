@@ -9,18 +9,10 @@ class UIController : public QObject
 {
     Q_OBJECT
 
+public:
     UIController()
     {
     }
-
-public:
-    static UIController& instance()
-    {
-        static UIController* ui_controller = new UIController();
-
-        return *ui_controller;
-    }
-
 
     Q_INVOKABLE QString get_text(const QString &key) const
     {

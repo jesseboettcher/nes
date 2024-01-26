@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QWindow>
+#include <QQuickWindow>
 
 class UIWindow : public QQuickWindow
 {
@@ -23,8 +23,9 @@ public:
 protected:
 	virtual void closeEvent(QCloseEvent *ev)
 	{
-		LOG(INFO) << "close event";
 		close_callback_();
+		ev->ignore();
+		hide();
 	}
 
 private:

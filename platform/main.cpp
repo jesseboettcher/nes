@@ -16,8 +16,6 @@
 
 #include <memory>
 
-std::shared_ptr<Nes> nes_;
-
 enum class Platform
 {
     MAC,
@@ -32,117 +30,120 @@ static constexpr Platform CURRENT_PLATFORM = Platform::LINUX;
 
 void connect_nes_refresh_callback(std::function<void()> callback)
 {
-    nes_->display().set_refresh_callback(callback);
+    UIContext::instance().nes->display().set_refresh_callback(callback);
 }
 
 void close_main_callback()
 {
     UIContext::instance().main_window = nullptr;
+    QApplication::exit(0);
 }
 
 void close_registers_callback()
 {
-    UIContext::instance().registers_window = nullptr;
+    // UIContext::instance().registers_window = nullptr;
 }
 
 void close_memory_callback()
 {
-    UIContext::instance().memory_window = nullptr;
+    // UIContext::instance().memory_window = nullptr;
 }
 
-UIMainWindow* configure_main_window(UIController& uiController)
+void create_windows()
 {
-    UIMainWindow* main_window = new UIMainWindow;
+    UIContext& ui = UIContext::instance();
 
-    main_window->setWindowTitle(QObject::tr("Nintendo Entertainment System"));
-    main_window->resize(512, 480);
-    main_window->show();
+    // main window
+    ui.main_window = new UIMainWindow;
 
-    main_window->set_close_callback(close_main_callback);
+    ui.main_window->setWindowTitle(QObject::tr("Nintendo Entertainment System"));
+    ui.main_window->resize(512, 480);
+    ui.main_window->show();
+
+    ui.main_window->set_close_callback(close_main_callback);
 
     QQuickView *view = new QQuickView();
-    view->rootContext()->setContextProperty("UIController", &uiController);
-    view->setSource(QUrl(QStringLiteral("qrc:/nes_qt/main.qml")));  // Replace with your QML file path
+    view->rootContext()->setContextProperty("UIController", &ui.controller);
+    view->setSource(QUrl(QStringLiteral("qrc:/nes_qt/main.qml")));
 
-    QWidget *container = QWidget::createWindowContainer(view, main_window);
+    QWidget *container = QWidget::createWindowContainer(view, ui.main_window);
     container->setMinimumSize(512, 480);
 
-    main_window->setCentralWidget(container);
-    return main_window;
-}
+    ui.main_window->setCentralWidget(container);
 
-UIWindow* configure_registers_window(QQmlApplicationEngine& engine, QMainWindow& main_window)
-{
-    QQmlComponent registers_component(&engine, QUrl(QStringLiteral("qrc:/nes_qt/registers.qml")));
-    QObject* registers_object = registers_component.create();
-
-    UIWindow* registers_window = qobject_cast<UIWindow*>(registers_object);
-    assert(registers_window);
-
-    registers_window->set_close_callback(close_registers_callback);
-
-    QRect main_rect = main_window.geometry();
-    registers_window->setX(main_rect.x() + main_rect.width() + 20);
-    registers_window->setY(main_rect.y());
-
-    registers_window->setMinimumSize(registers_window->geometry().size());
-    registers_window->setMaximumSize(registers_window->geometry().size());
-
-    return registers_window;
-}
-
-UIWindow* configure_memory_window(QQmlApplicationEngine& engine, QWindow& registers_window)
-{
-    QQmlComponent memory_component(&engine, QUrl(QStringLiteral("qrc:/nes_qt/memory.qml")));
+    // memory window
+    QQmlComponent memory_component(&ui.engine, QUrl(QStringLiteral("qrc:/nes_qt/memory.qml")));
     QObject* memory_object = memory_component.create();
 
-    UIWindow* memory_window = qobject_cast<UIWindow*>(memory_object);
-    assert(memory_window);
+    ui.memory_window = qobject_cast<UIWindow*>(memory_object);
 
-    memory_window->set_close_callback(close_memory_callback);
+    ui.memory_window->set_close_callback(close_memory_callback);
 
-    QRect registers_rect = registers_window.geometry();
-    memory_window->setX(registers_rect.x() + registers_rect.width() + 20);
-    memory_window->setY(registers_rect.y());
+    ui.memory_window->setMinimumSize(ui.memory_window->geometry().size());
+    ui.memory_window->setMaximumSize(ui.memory_window->geometry().size());
 
-    memory_window->setMinimumSize(memory_window->geometry().size());
-    memory_window->setMaximumSize(memory_window->geometry().size());
+    QRect main_rect = ui.main_window->geometry();
+    ui.memory_window->setX(main_rect.x() + main_rect.width() + 20);
+    ui.memory_window->setY(main_rect.y() + main_rect.height() - ui.memory_window->geometry().height());
 
-    return memory_window;
+    ui.configure_memory_window();
+
+    // registers window
+    QQmlComponent registers_component(&ui.engine, QUrl(QStringLiteral("qrc:/nes_qt/registers.qml")));
+    QObject* registers_object = registers_component.create();
+
+    ui.registers_window = qobject_cast<UIWindow*>(registers_object);
+
+    ui.registers_window->set_close_callback(close_registers_callback);
+
+    ui.registers_window->setMinimumSize(ui.registers_window->geometry().size());
+    ui.registers_window->setMaximumSize(ui.registers_window->geometry().size());
+
+    ui.configure_registers_window();
 }
 
-QMenuBar* create_menus(QMainWindow& main_window, MenuHandler& menu_handler)
+void create_menus()
 {
-    QMenuBar* menu_bar = nullptr;
+    UIContext& ui = UIContext::instance();
 
     if constexpr (CURRENT_PLATFORM == Platform::MAC)
     {
-        menu_bar = new QMenuBar();
+        ui.menu_bar = new QMenuBar();
     }
     else
     {
-        menu_bar = main_window.menuBar();
+        ui.menu_bar = ui.main_window->menuBar();
     }
 
-    QMenu *file_menu = menu_bar->addMenu("File");
-    QMenu *debug_menu = menu_bar->addMenu("Debug");
+    QMenu *file_menu = ui.menu_bar->addMenu("File");
+    QMenu *debug_menu = ui.menu_bar->addMenu("Control");
+    QMenu *window_menu = ui.menu_bar->addMenu("Window");
     
-    QAction *run_action = new QAction("Run", menu_bar);
+    QAction *run_action = new QAction("Run", ui.menu_bar);
     run_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
 
-    QAction *step_action = new QAction("Step", menu_bar);
+    QAction *step_action = new QAction("Step", ui.menu_bar);
     step_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
 
-    QAction *stop_action = new QAction("Stop", menu_bar);
+    QAction *stop_action = new QAction("Stop", ui.menu_bar);
     stop_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_C));
 
-    QAction *open_action = new QAction("Open ROM...", menu_bar);
+    QAction *open_action = new QAction("Open ROM...", ui.menu_bar);
     open_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_O));
 
-    QAction *goto_mem_action = new QAction("Goto Memory Location...", menu_bar);
+    QAction *goto_mem_action = new QAction("Goto Memory Location...", ui.menu_bar);
     goto_mem_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
 
+    QAction *close_action = new QAction("Close", ui.menu_bar);
+    close_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
+
+    QAction *show_memory_action = new QAction("Memory", ui.menu_bar);
+    QAction *show_registers_action = new QAction("Registers", ui.menu_bar);
+
     file_menu->addAction(open_action);
+
+    QObject::connect(open_action, &QAction::triggered, &ui.menu_handler, &MenuHandler::load_rom);
+
     debug_menu->addAction(run_action);
     debug_menu->addAction(step_action);
     debug_menu->addAction(stop_action);
@@ -150,49 +151,45 @@ QMenuBar* create_menus(QMainWindow& main_window, MenuHandler& menu_handler)
     debug_menu->addAction(goto_mem_action);
     debug_menu->addAction("Command..");
 
-    QObject::connect(open_action, &QAction::triggered, &menu_handler, &MenuHandler::load_rom);
-    QObject::connect(run_action,  &QAction::triggered, &menu_handler, &MenuHandler::run);
-    QObject::connect(step_action,  &QAction::triggered, &menu_handler, &MenuHandler::step);
-    QObject::connect(stop_action,  &QAction::triggered, &menu_handler, &MenuHandler::stop);
-    QObject::connect(goto_mem_action,  &QAction::triggered, &menu_handler, &MenuHandler::goto_memory);
+    QObject::connect(run_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::run);
+    QObject::connect(step_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::step);
+    QObject::connect(stop_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::stop);
+    QObject::connect(goto_mem_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::goto_memory);
 
-    return menu_bar;
+    window_menu->addAction(close_action);
+    window_menu->addSeparator();
+    window_menu->addAction(show_memory_action);
+    window_menu->addAction(show_registers_action);
+
+    QObject::connect(close_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::close);
+    QObject::connect(show_memory_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::show_memory);
+    QObject::connect(show_registers_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::show_registers);
 }
 
 int main(int argc, char *argv[])
 {
+    QApplication app(argc, argv);
+
     // Launch NES - nes needs to be created first because the QT NesDisplayView installs its
     // refresh callback in the constructor
-    nes_ = std::make_shared<Nes>(nullptr);
-
-    // Create and start QTApp
-    QApplication app(argc, argv);
+    UIContext& ui = UIContext::instance();
+    ui.nes = std::make_shared<Nes>();
 
     qmlRegisterType<NesDisplayView>("com.boettcher.jesse", 0, 1, "NesDisplayView");
     qmlRegisterType<UIWindow>("com.boettcher.jesse", 0, 1, "UIWindow");
 
-    UIContext& ui_context = UIContext::instance();
-
     QObject::connect(
-        &ui_context.engine,
+        &ui.engine,
         &QQmlApplicationEngine::objectCreationFailed,
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    UIController& uiController = UIController::instance();
-    ui_context.engine.rootContext()->setContextProperty("UIController", &uiController);
+    ui.engine.rootContext()->setContextProperty("UIController", &ui.controller);
+    ui.engine.rootContext()->setContextProperty("menu_handler", &ui.menu_handler);
 
-    // Create windows
-    ui_context.main_window = configure_main_window(uiController);
-    ui_context.registers_window = configure_registers_window(ui_context.engine, *ui_context.main_window);
-    ui_context.memory_window = configure_memory_window(ui_context.engine, *ui_context.registers_window);
-
-    // Add menus to the menu bar
-    MenuHandler menu_handler(nes_, ui_context.memory_window);
-    ui_context.menu_bar = create_menus(*ui_context.main_window, menu_handler);
-
-    ui_context.engine.rootContext()->setContextProperty("menu_handler", &menu_handler);
+    create_windows();
+    create_menus();
 
     return app.exec();
 }

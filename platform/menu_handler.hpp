@@ -1,4 +1,4 @@
-#include "system/nes.hpp"
+#pragma once
 
 #include <QObject>
 #include <QWindow>
@@ -10,7 +10,7 @@ class MenuHandler : public QObject
     Q_OBJECT
 
 public:
-    MenuHandler(std::shared_ptr<Nes>& nes, QWindow* memory_window);
+    MenuHandler();
 
 public slots:
     void load_rom();
@@ -22,8 +22,10 @@ public slots:
     void goto_memory();
     void command();
 
+    void close();
+    void show_registers();
+    void show_memory();
+
 private:
 	void start_nes(std::filesystem::path path);
-
-	std::shared_ptr<Nes> nes_;
 };
