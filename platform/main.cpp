@@ -114,11 +114,20 @@ void create_menus()
     {
         ui.menu_bar = ui.main_window->menuBar();
     }
-
-    QMenu *file_menu = ui.menu_bar->addMenu("File");
-    QMenu *debug_menu = ui.menu_bar->addMenu("Control");
-    QMenu *window_menu = ui.menu_bar->addMenu("Window");
     
+    // File menu
+    QMenu *file_menu = ui.menu_bar->addMenu("File");
+
+    QAction *open_action = new QAction("Open ROM...", ui.menu_bar);
+    open_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_O));
+
+    file_menu->addAction(open_action);
+
+    QObject::connect(open_action, &QAction::triggered, &ui.menu_handler, &MenuHandler::load_rom);
+
+    // Control menu
+    QMenu *debug_menu = ui.menu_bar->addMenu("Control");
+
     QAction *run_action = new QAction("Run", ui.menu_bar);
     run_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
 
@@ -126,35 +135,35 @@ void create_menus()
     step_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
 
     QAction *stop_action = new QAction("Stop", ui.menu_bar);
-    stop_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_C));
-
-    QAction *open_action = new QAction("Open ROM...", ui.menu_bar);
-    open_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_O));
+    stop_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_K));
 
     QAction *goto_mem_action = new QAction("Goto Memory Location...", ui.menu_bar);
     goto_mem_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
 
-    QAction *close_action = new QAction("Close", ui.menu_bar);
-    close_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
-
-    QAction *show_memory_action = new QAction("Memory", ui.menu_bar);
-    QAction *show_registers_action = new QAction("Registers", ui.menu_bar);
-
-    file_menu->addAction(open_action);
-
-    QObject::connect(open_action, &QAction::triggered, &ui.menu_handler, &MenuHandler::load_rom);
+    QAction *cmd_action = new QAction("Command...", ui.menu_bar);
+    cmd_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_C));
 
     debug_menu->addAction(run_action);
     debug_menu->addAction(step_action);
     debug_menu->addAction(stop_action);
     debug_menu->addSeparator();
     debug_menu->addAction(goto_mem_action);
-    debug_menu->addAction("Command..");
+    debug_menu->addAction(cmd_action);
 
     QObject::connect(run_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::run);
     QObject::connect(step_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::step);
     QObject::connect(stop_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::stop);
     QObject::connect(goto_mem_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::goto_memory);
+    QObject::connect(cmd_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::command);
+
+    // Window menu
+    QMenu *window_menu = ui.menu_bar->addMenu("Window");
+
+    QAction *close_action = new QAction("Close", ui.menu_bar);
+    close_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
+
+    QAction *show_memory_action = new QAction("Memory", ui.menu_bar);
+    QAction *show_registers_action = new QAction("Registers", ui.menu_bar);
 
     window_menu->addAction(close_action);
     window_menu->addSeparator();

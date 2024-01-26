@@ -94,7 +94,16 @@ void MenuHandler::goto_memory()
 
 void MenuHandler::command()
 {
-    qDebug() << "command";
+    QString text = QInputDialog::getText(
+        nullptr,                 // Parent widget
+        "Command",    // Title of the dialog
+        "Enter command to run...",      // Label text
+        QLineEdit::Normal,       // Text line edit mode
+        QString(),               // Default text
+        nullptr,                 // OK button pressed
+        Qt::WindowFlags()        // Window flags
+    );
+    CommandPrompt::instance().write_command(text.toStdString());
 }
 
 void MenuHandler::show_registers()
