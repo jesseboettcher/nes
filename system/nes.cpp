@@ -154,6 +154,8 @@ void Nes::update_state(State state)
         processor_.print_status();
         update_ui(UI::current_instruction_label, "");
         update_ui_opacity(UI::dimming_rect, 0.3);
+
+        update_ui_memory_view(processor_.cmemory());
     }
     else if (state_ == State::RUNNING)
     {

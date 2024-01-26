@@ -17,7 +17,9 @@ public:
 		WRITE,
 	};
 
-	using AddressableMemory = std::array<uint8_t, 64 * 1024>;
+	static const uint32_t ADDRESSABLE_MEMORY_SIZE = 64 * 1024;
+
+	using AddressableMemory = std::array<uint8_t, ADDRESSABLE_MEMORY_SIZE>;
     using AccessNotifier = std::function<void()>;
 
 	Memory()

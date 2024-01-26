@@ -34,14 +34,15 @@ Window
         }
     }
 
-    // Status names
-    Item
+    // Register names
+    Column
     {
+        y: 15
         width: 70
+        spacing: 5
 
         Text
         {
-            y: 15
             font.bold: true
             font.family: defaultFontFamily
             text: "State: "
@@ -50,7 +51,6 @@ Window
         }
         Text
         {
-            y: 35
             font.bold: true
             font.family: defaultFontFamily
             text: "PC: "
@@ -59,7 +59,6 @@ Window
         }
         Text
         {
-            y: 55
             font.bold: true
             font.family: defaultFontFamily
             text: " A: "
@@ -68,7 +67,6 @@ Window
         }
         Text
         {
-            y: 75
             font.bold: true
             font.family: defaultFontFamily
             text: " X: "
@@ -77,7 +75,6 @@ Window
         }
         Text
         {
-            y: 95
             font.bold: true
             font.family: defaultFontFamily
             text: " Y: "
@@ -86,7 +83,6 @@ Window
         }
         Text
         {
-            y: 115
             font.bold: true
             font.family: defaultFontFamily
             text: "SP: "
@@ -95,16 +91,18 @@ Window
         }
     }
 
-    // Status content
-    Item
+    // Register content
+    Column
     {
+        y: 15
         x: 70
+        spacing: 5
+
         Text
         {
             id: state_label
             property string textKey: "state_label"
 
-            y: 15
             font.bold: true
             color: "#000000"
             font.family: defaultFontFamily
@@ -118,7 +116,6 @@ Window
             id: pc_label
             property string textKey: "pc_label"
 
-            y: 35
             font.bold: true
             font.family: defaultFontFamily
             text: UIController.get_text(pc_label.textKey)
@@ -130,7 +127,6 @@ Window
             id: a_reg_label
             property string textKey: "a_reg_label"
 
-            y: 55
             font.bold: true
             font.family: defaultFontFamily
             text: UIController.get_text(a_reg_label.textKey)
@@ -143,7 +139,6 @@ Window
             id: x_reg_label
             property string textKey: "x_reg_label"
 
-            y: 75
             font.bold: true
             font.family: defaultFontFamily
             text: UIController.get_text(x_reg_label.textKey)
@@ -156,7 +151,6 @@ Window
             id: y_reg_label
             property string textKey: "y_reg_label"
 
-            y: 95
             font.bold: true
             font.family: defaultFontFamily
             text: UIController.get_text(y_reg_label.textKey)
@@ -169,7 +163,6 @@ Window
             id: sp_reg_label
             property string textKey: "sp_reg_label"
 
-            y: 115
             font.bold: true
             font.family: defaultFontFamily
             text: UIController.get_text(sp_reg_label.textKey)

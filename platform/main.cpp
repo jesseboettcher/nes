@@ -49,7 +49,7 @@ void configure_main_window(QMainWindow& main_window, UIController& uiController)
     main_window.setCentralWidget(container);
 }
 
-void configure_registers_window(QQmlApplicationEngine& engine, QMainWindow& main_window)
+QWindow* configure_registers_window(QQmlApplicationEngine& engine, QMainWindow& main_window)
 {
     QQmlComponent registers_component(&engine, QUrl(QStringLiteral("qrc:/nes_qt/registers.qml")));
     QObject* registers_object = registers_component.create();
@@ -60,6 +60,29 @@ void configure_registers_window(QQmlApplicationEngine& engine, QMainWindow& main
     QRect main_rect = main_window.geometry();
     registers_window->setX(main_rect.x() + main_rect.width() + 20);
     registers_window->setY(main_rect.y());
+
+    registers_window->setMinimumSize(registers_window->geometry().size());
+    registers_window->setMaximumSize(registers_window->geometry().size());
+
+    return registers_window;
+}
+
+QWindow* configure_memory_window(QQmlApplicationEngine& engine, QWindow& registers_window)
+{
+    QQmlComponent memory_component(&engine, QUrl(QStringLiteral("qrc:/nes_qt/memory.qml")));
+    QObject* memory_object = memory_component.create();
+
+    QWindow* memory_window = qobject_cast<QWindow*>(memory_object);
+    assert(memory_window);
+
+    QRect registers_rect = registers_window.geometry();
+    memory_window->setX(registers_rect.x() + registers_rect.width() + 20);
+    memory_window->setY(registers_rect.y());
+
+    memory_window->setMinimumSize(memory_window->geometry().size());
+    memory_window->setMaximumSize(memory_window->geometry().size());
+
+    return memory_window;
 }
 
 QMenuBar* create_menus(QMainWindow& main_window, MenuHandler& menu_handler)
@@ -130,7 +153,9 @@ int main(int argc, char *argv[])
     // Create windows
     QMainWindow main_window;
     configure_main_window(main_window, uiController);
-    configure_registers_window(engine, main_window);
+
+    QWindow * registers_window = configure_registers_window(engine, main_window);
+    QWindow * memory_window = configure_memory_window(engine, *registers_window);
 
     // Add menus to the menu bar
     MenuHandler menu_handler(nes_);
