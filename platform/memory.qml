@@ -51,6 +51,11 @@ Window
 
         clip: true
 
+        function set_scroll_position(pos)
+        {
+            ScrollBar.vertical.position = pos
+        }
+
         Row
         {
             width: parent.width

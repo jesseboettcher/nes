@@ -5,10 +5,19 @@
 
 #include <QDebug>
 #include <QFileDialog>
+#include <QInputDialog>
 
 #include <string>
 
 std::thread* vm_thread_;
+
+MenuHandler::MenuHandler(std::shared_ptr<Nes>& nes, QWindow* memory_window)
+    : QObject(nullptr)
+    , nes_(nes)
+{
+    scroll_view_ = memory_window->findChild<QQuickItem*>("memory_scroll_view");
+    assert(scroll_view_);
+}
 
 void MenuHandler::start_nes(std::filesystem::path path)
 {
@@ -56,6 +65,26 @@ void MenuHandler::step()
 void MenuHandler::stop()
 {
     nes_->user_interrupt();
+}
+
+void MenuHandler::goto_memory()
+{
+    QString text = QInputDialog::getText(
+        nullptr,                 // Parent widget
+        "Goto Memory Location",    // Title of the dialog
+        "Jump to memory at address...",      // Label text
+        QLineEdit::Normal,       // Text line edit mode
+        QString(),               // Default text
+        nullptr,                 // OK button pressed
+        Qt::WindowFlags()        // Window flags
+    );
+    int32_t address = std::stoi(text.toStdString(), nullptr, 0);
+    int32_t line_number = address / 8; /* number of bytes shown per line */
+
+    static const double ALIGNMENT_OFFSET = 0.00001; // needed to avoid a partial line shown
+    double scroll_position = line_number / (Memory::ADDRESSABLE_MEMORY_SIZE / 8.0) + ALIGNMENT_OFFSET;
+
+    QMetaObject::invokeMethod(scroll_view_, "set_scroll_position", Q_ARG(QVariant, scroll_position));
 }
 
 void MenuHandler::command()

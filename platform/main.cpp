@@ -113,17 +113,22 @@ QMenuBar* create_menus(QMainWindow& main_window, MenuHandler& menu_handler)
     QAction *open_action = new QAction("Open ROM...", menu_bar);
     open_action->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_O));
 
+    QAction *goto_mem_action = new QAction("Goto Memory Location...", menu_bar);
+    goto_mem_action->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_G));
+
     file_menu->addAction(open_action);
     debug_menu->addAction(run_action);
     debug_menu->addAction(step_action);
     debug_menu->addAction(stop_action);
     debug_menu->addSeparator();
+    debug_menu->addAction(goto_mem_action);
     debug_menu->addAction("Command..");
 
     QObject::connect(open_action, &QAction::triggered, &menu_handler, &MenuHandler::load_rom);
     QObject::connect(run_action,  &QAction::triggered, &menu_handler, &MenuHandler::run);
     QObject::connect(step_action,  &QAction::triggered, &menu_handler, &MenuHandler::step);
     QObject::connect(stop_action,  &QAction::triggered, &menu_handler, &MenuHandler::stop);
+    QObject::connect(goto_mem_action,  &QAction::triggered, &menu_handler, &MenuHandler::goto_memory);
 
     return menu_bar;
 }
@@ -158,7 +163,7 @@ int main(int argc, char *argv[])
     QWindow * memory_window = configure_memory_window(engine, *registers_window);
 
     // Add menus to the menu bar
-    MenuHandler menu_handler(nes_);
+    MenuHandler menu_handler(nes_, memory_window);
     QMenuBar* menu_bar = create_menus(main_window, menu_handler);
 
     engine.rootContext()->setContextProperty("menu_handler", &menu_handler);
