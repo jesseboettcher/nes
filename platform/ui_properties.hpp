@@ -1,5 +1,3 @@
-#ifndef __UI_PROPERTIES_H__
-#define __UI_PROPERTIES_H__
 #pragma once
 
 #include "lib/magic_enum.hpp"
@@ -28,6 +26,7 @@ enum class UI
 };
 
 static constexpr std::string_view UI_BLACK = "#000000";
+static constexpr std::string_view UI_NEAR_BLACK = "#455760";
 static constexpr std::string_view UI_LIGHT_GREY = "#BBBBBB";
 
 std::string_view ui_to_string(UI property);
@@ -39,5 +38,3 @@ void update_ui(UI property, std::optional<std::string_view> str,
 void update_ui_opacity(UI property, double opacity);
 
 void update_ui_memory_view(const Memory& memory);
-
-#endif // __UI_PROPERTIES_H__

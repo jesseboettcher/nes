@@ -144,7 +144,7 @@ void Nes::update_state(State state)
     State old_state = state_;
 
     state_ = state;
-    const char * color = state_ == State::RUNNING ? "#4F8F00" : "#00000";
+    const char * color = state_ == State::RUNNING ? "#4F8F00" : "#455760";
     update_ui(UI::state_label, magic_enum::enum_name<State>(state), color);
 
     processor_.set_verbose(state_ == State::IDLE);

@@ -2,6 +2,7 @@
 
 #include "io/cartridge_interface.hpp"
 #include "io/prompt.hpp"
+#include "platform/ui_context.hpp"
 
 #include <QDebug>
 #include <QFileDialog>
@@ -15,8 +16,6 @@ MenuHandler::MenuHandler(std::shared_ptr<Nes>& nes, QWindow* memory_window)
     : QObject(nullptr)
     , nes_(nes)
 {
-    scroll_view_ = memory_window->findChild<QQuickItem*>("memory_scroll_view");
-    assert(scroll_view_);
 }
 
 void MenuHandler::start_nes(std::filesystem::path path)
@@ -69,6 +68,12 @@ void MenuHandler::stop()
 
 void MenuHandler::goto_memory()
 {
+    if (UIContext::instance().memory_window == nullptr)
+    {
+        return;
+    }
+    QQuickItem* scroll_view_ = UIContext::instance().memory_window->findChild<QQuickItem*>("memory_scroll_view");
+
     QString text = QInputDialog::getText(
         nullptr,                 // Parent widget
         "Goto Memory Location",    // Title of the dialog

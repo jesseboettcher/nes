@@ -12,7 +12,7 @@ qt_standard_project_setup()
 qt_policy(SET QTP0001 OLD)
 
 qt_add_executable(appnes_qt
-    main.cpp view_update_relay.hpp menu_handler.hpp menu_handler.cpp ui_controller.hpp ui_properties.cpp
+    main.cpp view_update_relay.hpp menu_handler.hpp menu_handler.cpp ui_controller.hpp ui_properties.cpp ui_window.hpp
 )
 
 target_include_directories(appnes_qt

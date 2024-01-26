@@ -53,10 +53,14 @@ void update_ui_memory_view(const Memory& memory)
 
         if (i % BYTES_PER_LINE == 0)
         {
+            if (i != 0)
+            {
+                addrstr << " ";
+            }
             addrstr << std::setw(0);
             addrstr << "0x";
             addrstr << std::hex << std::uppercase << std::setfill('0') << std::setw(4);
-            addrstr << i << " ";
+            addrstr << i;
         }
     }
 

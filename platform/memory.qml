@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
+import com.boettcher.jesse 0.1
 
-Window
+UIWindow
 {
     id: memory_window
     objectName: "memory_window"
@@ -87,7 +88,7 @@ Window
 
                 y: 5
                 width: 180
-                height: contentHeight
+                height: contentHeight + 5
 
                 font.bold: true
                 color: "#455760"

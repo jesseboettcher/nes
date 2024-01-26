@@ -241,7 +241,7 @@ uint8_t Processor6502::execute_instruction(const Instruction& i)
 
 		std::stringstream str;
 		str << instr_table_[i.opcode()].assembler << ":" << i;
-		update_ui(UI::current_instruction_label, str.str());
+		update_ui(UI::current_instruction_label, str.str(), UI_NEAR_BLACK);
 	}
 
     log_ << cycle_count_ << "\t"
@@ -404,11 +404,11 @@ void Processor6502::print_status()
 	// 		  << "    " << std::hex << std::setfill('0') << std::setw(2) << +memory_[registers_.PC]
 	// 		  << "      (cycle " << std::dec << cycle_count_ << ")" << std::endl;
 
-    update_ui(UI::pc_label,    strformat("0x%04X", registers_.PC), UI_BLACK);
-    update_ui(UI::a_reg_label, strformat("0x%04X", registers_.A), UI_BLACK);
-    update_ui(UI::x_reg_label, strformat("0x%04X", registers_.X), UI_BLACK);
-    update_ui(UI::y_reg_label, strformat("0x%04X", registers_.Y), UI_BLACK);
-    update_ui(UI::sp_reg_label, strformat("0x%04X", registers_.SP), UI_BLACK);
+    update_ui(UI::pc_label,    strformat("0x%04X", registers_.PC), UI_NEAR_BLACK);
+    update_ui(UI::a_reg_label, strformat("0x%04X", registers_.A), UI_NEAR_BLACK);
+    update_ui(UI::x_reg_label, strformat("0x%04X", registers_.X), UI_NEAR_BLACK);
+    update_ui(UI::y_reg_label, strformat("0x%04X", registers_.Y), UI_NEAR_BLACK);
+    update_ui(UI::sp_reg_label, strformat("0x%04X", registers_.SP), UI_NEAR_BLACK);
 }
 
 void Processor6502::dim_status()

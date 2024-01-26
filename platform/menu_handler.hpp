@@ -26,5 +26,4 @@ private:
 	void start_nes(std::filesystem::path path);
 
 	std::shared_ptr<Nes> nes_;
-    QQuickItem * scroll_view_{nullptr};
 };
