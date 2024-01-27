@@ -28,7 +28,7 @@ std::ostream& operator << (std::ostream& os, const Memory::View v)
 	static constexpr uint8_t BYTES_PER_BLOCK = 2;
 	static constexpr uint8_t BYTES_PER_LINE = 4;
 
-	for (uint16_t i = 0; i < v.size; ++i)
+	for (uint16_t i = 0; i < v.size(); ++i)
 	{
 		if (i % BYTES_PER_LINE == 0)
 		{
@@ -38,14 +38,14 @@ std::ostream& operator << (std::ostream& os, const Memory::View v)
 			}
 
 			// address prefix
-			os << "0x" << std::setw(4) << v.address + i << "    ";
+			os << "0x" << std::setw(4) << v.address() + i << "    ";
 		}
 		else if (i % BYTES_PER_BLOCK == 0)
 		{
 			os << " ";
 		}
 
-		os << std::setw(2) << +v.memory[v.address + i];
+		os << std::setw(2) << +v[v.address() + i];
 	}
 	os << std::dec << std::endl << std::endl;
 
@@ -89,14 +89,14 @@ std::ostream& operator << (std::ostream& os, const VideoMemory::View v)
 std::ostream& operator << (std::ostream& os, const Memory::StackView v)
 {
 	os << "\n-------------\n";
-	os << "  Stack (" << v.size << ")\n";
+	os << "  Stack (" << v.size() << ")\n";
 	os << "-------------\n";
 	os << std::hex << std::setfill('0');
 
 	static constexpr uint8_t BYTES_PER_BLOCK = 1;
 	static constexpr uint8_t BYTES_PER_LINE = 1;
 
-	for (uint16_t i = 0; i < v.size; ++i)
+	for (uint16_t i = 0; i < v.size(); ++i)
 	{
 		if (i % BYTES_PER_LINE == 0)
 		{
@@ -106,14 +106,14 @@ std::ostream& operator << (std::ostream& os, const Memory::StackView v)
 			}
 
 			// address prefix
-			os << "0x" << std::setw(4) << v.address + i << "    ";
+			os << "0x" << std::setw(4) << v.address() + i << "    ";
 		}
 		else if (i % BYTES_PER_BLOCK == 0)
 		{
 			os << " ";
 		}
 
-		os << std::setw(2) << +v.memory[v.address + i];
+		os << std::setw(2) << +v[v.address() + i];
 	}
 	os << std::dec << std::endl << std::endl;
 

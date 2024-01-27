@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <optional>
+#include <queue>
 #include <semaphore>
 #include <string>
 
@@ -26,5 +27,6 @@ private:
     
     std::mutex mutex_;
     std::binary_semaphore command_sema_;
+    std::queue<std::string> queued_commands_;
     std::optional<std::string> maybe_command_;
 };

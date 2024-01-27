@@ -13,11 +13,12 @@ Nes::Nes(std::unique_ptr<NesFileParser> cartridge)
 , processor_()
 , display_()
 , ppu_(processor_, display_)
+, joypads_(processor_)
 {
-	std::cout << "Launching Nes...\n";
+    std::cout << "Launching Nes...\n";
 
     load_cartridge(std::move(cartridge));
-	display_.init();
+    display_.init();
 
     update_state(State::OFF);
 }
@@ -48,13 +49,13 @@ void Nes::run_continuous()
     update_state(State::RUNNING);
 
     while (!should_exit_)
-	{
-		if (!step())
-		{
-			continue;
-		}
+    {
+        if (!step())
+        {
+            continue;
+        }
         check_timer();
-	}
+    }
     should_exit_ = false;
     update_state(State::IDLE);
 }
@@ -64,42 +65,43 @@ void Nes::run()
     update_state(State::RUNNING);
     
     while (!should_exit_)
-	{
-		if (!step())
-		{
-			break;
-		}
+    {
+        if (!step())
+        {
+            break;
+        }
         check_timer();
-	}
+    }
     should_exit_ = false;
     update_state(State::IDLE);
 }
 
 bool Nes::step()
 {
-	bool should_continue = true;
+    bool should_continue = true;
 
-	clock_ticks_ += 4;
+    clock_ticks_ += 4;
 
-	ppu_.step();
+    ppu_.step();
 
-	if (clock_ticks_ % 12 == 0)
-	{
-		should_continue = processor_.step();
-	}
+    if (clock_ticks_ % 12 == 0)
+    {
+        joypads_.step();
+        should_continue = processor_.step();
+    }
 
-	return should_continue;
+    return should_continue;
 }
 
 void Nes::step_cpu_instruction()
 {
-	uint64_t prev_instr_count = processor_.instruction_count();
-	bool should_continue = true;
+    uint64_t prev_instr_count = processor_.instruction_count();
+    bool should_continue = true;
 
-	while (processor_.instruction_count() == prev_instr_count && should_continue)
-	{
-		should_continue = step();
-	}
+    while (processor_.instruction_count() == prev_instr_count && should_continue)
+    {
+        should_continue = step();
+    }
     processor_.print_status();
 }
 

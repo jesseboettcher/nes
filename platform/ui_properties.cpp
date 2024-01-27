@@ -49,10 +49,13 @@ void update_ui_memory_view(const Memory& memory)
     std::stringstream memstr;
     std::stringstream addrstr;
 
+    // Use a view to avoid triggering peripherals
+    Memory::View m = memory.view(0, Memory::ADDRESSABLE_MEMORY_SIZE);
+
     for (int32_t i = 0;i < Memory::ADDRESSABLE_MEMORY_SIZE;++i)
     {
         memstr << std::hex << std::setfill('0') << std::setw(2);
-        memstr << static_cast<uint32_t>(memory[i]) << " ";
+        memstr << static_cast<uint32_t>(m[i]) << " ";
 
         if (i % BYTES_PER_LINE == 0)
         {
@@ -79,4 +82,22 @@ void update_ui_memory_view(const Memory& memory)
                            QString::fromStdString(addrstr.str()));
     ui.controller.set_color(QString::fromStdString(std::string(magic_enum::enum_name<UI>(UI::address_view))),
                            QString::fromStdString(std::string(UI_LIGHT_BLACK)));
+}
+
+bool is_button_pressed(Joypads::Button button)
+{
+    static const std::unordered_map<Joypads::Button, int> button_to_key_map = {
+        { Joypads::Button::A,       Qt::Key::Key_X },
+        { Joypads::Button::B,       Qt::Key::Key_Z },
+        { Joypads::Button::Select,  Qt::Key::Key_V },
+        { Joypads::Button::Start,   Qt::Key::Key_B },
+        { Joypads::Button::Up,      Qt::Key::Key_Up },
+        { Joypads::Button::Down,    Qt::Key::Key_Down },
+        { Joypads::Button::Left,    Qt::Key::Key_Left },
+        { Joypads::Button::Right,   Qt::Key::Key_Right }
+    };
+
+    UIContext& ui = UIContext::instance();
+
+    return ui.main_window->is_key_pressed(button_to_key_map.at(button));
 }

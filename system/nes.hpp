@@ -3,6 +3,7 @@
 #include "io/cartridge_interface.hpp"
 #include "io/display.hpp"
 #include "io/files.hpp"
+#include "io/joypads.hpp"
 #include "processor/nes_ppu.hpp"
 #include "processor/processor_6502.hpp"
 
@@ -61,6 +62,7 @@ private:
 	Processor6502 processor_;
 	NesDisplay display_;
 	NesPPU ppu_;
+	Joypads joypads_;
 
     std::atomic<State> state_{State::IDLE};
     std::atomic<bool> should_exit_{false};

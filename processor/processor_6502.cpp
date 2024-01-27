@@ -16,6 +16,7 @@ Processor6502::Processor6502()
 
     instr_table_ = make_instruction_table();
     
+    std::filesystem::remove("/tmp/vnes.log");
     log_.open("/tmp/vnes.log");
     if (!log_.is_open())
     {
@@ -391,9 +392,8 @@ bool Processor6502::check_breakpoints()
 
 void Processor6502::wait_for_cycle_count(uint8_t cycles)
 {
-//	static constexpr std::chrono::nanoseconds NS_PER_CYCLE(559); // @ 1.789773 MHz
-//	std::this_thread::sleep_for(cycles * NS_PER_CYCLE);
-
+	// static constexpr std::chrono::nanoseconds NS_PER_CYCLE(559); // @ 1.789773 MHz
+	// std::this_thread::sleep_for(cycles * NS_PER_CYCLE);
 	cycle_count_ += cycles;
 	cycles_to_wait_ -= cycles;
 }

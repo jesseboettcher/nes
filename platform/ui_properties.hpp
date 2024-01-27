@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lib/magic_enum.hpp"
+#include "io/joypads.hpp"
 #include "processor/memory.hpp"
 
 #include <optional>
@@ -39,3 +40,5 @@ void update_ui(UI property, std::optional<std::string_view> str,
 void update_ui_opacity(UI property, double opacity);
 
 void update_ui_memory_view(const Memory& memory);
+
+bool is_button_pressed(Joypads::Button button);

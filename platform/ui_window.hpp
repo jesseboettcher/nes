@@ -3,59 +3,85 @@
 #include <QMainWindow>
 #include <QQuickWindow>
 
+#include <unordered_map>
+
+#include <glog/logging.h>
+
 class UIWindow : public QQuickWindow
 {
-	Q_OBJECT
+    Q_OBJECT
     QML_ELEMENT
 
 public:
-	UIWindow()
-	 : QQuickWindow()
-	{
+    UIWindow()
+     : QQuickWindow()
+    {
 
-	}
+    }
 
-	void set_close_callback(std::function<void()> close_callback)
-	{
-		close_callback_ = close_callback;
-	}
+    void set_close_callback(std::function<void()> close_callback)
+    {
+        close_callback_ = close_callback;
+    }
 
 protected:
-	virtual void closeEvent(QCloseEvent *ev)
-	{
-		close_callback_();
-		ev->ignore();
-		hide();
-	}
+    virtual void closeEvent(QCloseEvent *ev)
+    {
+        close_callback_();
+        ev->ignore();
+        hide();
+    }
 
 private:
-	std::function<void()> close_callback_;
+    std::function<void()> close_callback_;
 };
 
 class UIMainWindow : public QMainWindow
 {
-	Q_OBJECT
+    Q_OBJECT
     QML_ELEMENT
 
 public:
-	UIMainWindow()
-	 : QMainWindow()
-	{
+    UIMainWindow()
+     : QMainWindow()
+    {
 
-	}
+    }
 
-	void set_close_callback(std::function<void()> close_callback)
-	{
-		close_callback_ = close_callback;
-	}
+    void set_close_callback(std::function<void()> close_callback)
+    {
+        close_callback_ = close_callback;
+    }
+
+    bool is_key_pressed(int key) { return pressed_keys_[key]; }
 
 protected:
-	virtual void closeEvent(QCloseEvent *ev)
-	{
-		close_callback_();
-	}
+    virtual void keyPressEvent(QKeyEvent *event) override
+    {
+        static bool printed = false;
+
+        if (not printed)
+        {
+            LOG(INFO) << event->key();
+            printed = true;
+        }
+
+        pressed_keys_[event->key()] = true;
+    }
+
+    virtual void keyReleaseEvent(QKeyEvent *event) override
+    {
+        pressed_keys_[event->key()] = false;
+    }
+
+    virtual void closeEvent(QCloseEvent *ev) override
+    {
+        close_callback_();
+    }
 
 private:
-	std::function<void()> close_callback_;
+    std::function<void()> close_callback_;
+
+    std::unordered_map<int, bool> pressed_keys_;
 };
 

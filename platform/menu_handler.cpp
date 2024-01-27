@@ -31,9 +31,13 @@ void MenuHandler::start_nes(std::filesystem::path path)
 void MenuHandler::load_rom()
 {
     // DEBUG ITERATION SPEED
-    std::filesystem::path path("/Users/jesse/code/nes/roms/donkey_kong.nes");
-    start_nes(path);
-    return;
+    // std::filesystem::path path("/Users/jesse/code/nes/roms/donkey_kong.nes");
+    // std::filesystem::path path("/Users/jesse/Documents/wip/nes/NES/nestest.nes");
+    // std::filesystem::path path("/Users/jesse/Documents/wip/nes/NES/nes-test-roms-master/read_joy3/test_buttons.nes");
+    // std::filesystem::path path("/Users/jesse/Documents/wip/nes/NES/nes-test-roms-master/read_joy3/count_errors_fast.nes");
+
+    // start_nes(path);
+    // return;
     ///////
 
     QString fileName = QFileDialog::getOpenFileName(
@@ -52,6 +56,8 @@ void MenuHandler::load_rom()
 
 void MenuHandler::run()
 {
+    // load_rom(); // DEBUG
+    // CommandPrompt::instance().write_command("b 0xE031"); // DEBUG
     CommandPrompt::instance().write_command("run");
 }
 

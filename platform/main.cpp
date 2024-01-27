@@ -100,6 +100,8 @@ void create_windows()
     ui.registers_window->setMaximumSize(ui.registers_window->geometry().size());
 
     ui.configure_registers_window();
+
+    ui.main_window->activateWindow();
 }
 
 void create_menus()

@@ -194,6 +194,7 @@ public:
 
 protected:
 	friend class CartridgeInterface;
+	friend class Joypads;
 	friend class NesPPU;
 	friend class Test6502;
 	Memory& memory() { return memory_; }

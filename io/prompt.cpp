@@ -77,8 +77,8 @@ void CommandPrompt::launch_prompt(Nes& nes)
             {
                 break;
             }
-            cmd = maybe_command_.value();
-            maybe_command_.reset();
+            cmd = queued_commands_.front();
+            queued_commands_.pop();
         }
         
         should_continue = execute_command(nes, cmd);
@@ -88,9 +88,8 @@ void CommandPrompt::launch_prompt(Nes& nes)
 void CommandPrompt::write_command(const std::string& cmd)
 {
     std::lock_guard<std::mutex> guard(mutex_);
-    assert(!maybe_command_.has_value());
     
-    maybe_command_ = cmd;
+	queued_commands_.push(cmd);
     command_sema_.release();
 }
 
