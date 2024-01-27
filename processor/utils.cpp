@@ -5,7 +5,7 @@
 
 std::ostream& operator << (std::ostream& os, const Instruction& i)
 {
-	os << " 0x" << std::hex << std::uppercase << std::setw(2) << +i.opcode();
+	os << " 0x" << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << +i.opcode();
 
 	if (i.values.size() >= 2)
 	{

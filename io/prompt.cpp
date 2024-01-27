@@ -110,7 +110,7 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
 	const std::regex clear_regex("(clear|c) (0x[A-Fa-f0-9]+|[0-9]+)");
 	const std::regex history_regex("(history|h) (0x[A-Fa-f0-9]+|[0-9]+)");
 	const std::regex run_regex("run|r");
-	const std::regex step_regex("step|s");
+	const std::regex step_regex("(step|s)\\s*(\\d*)");
 	const std::regex exit_regex("exit|e|quit|q");
 	const std::regex test_regex("test|t");
 	const std::regex print_regex("(print|p) (r|registers|m|memory|s|stack|vram|v|n|nametable|tile|oam|sprite|attr|palette) ?(0x[A-Fa-f0-9]+|[0-9]+)? ?(0x[A-Fa-f0-9]+|[0-9]+)?");
@@ -173,7 +173,12 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
 	}
 	else if (std::regex_match(cmd, base_match, step_regex))
 	{
-		nes.step_cpu_instruction();
+		int32_t i_count = base_match.size() == 3 && base_match[2].str().size() ? std::stoi(base_match[2], 0, 0) : 1;
+
+		for (int32_t i = 0;i < i_count;i++)
+		{
+			nes.step_cpu_instruction();
+		}
 	}
 	else if (std::regex_match(cmd, base_match, print_regex) && base_match.size() > 1)
 	{
