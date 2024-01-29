@@ -128,6 +128,12 @@ void MenuHandler::show_memory()
     UIContext::instance().configure_memory_window();
 }
 
+void MenuHandler::show_sprites()
+{
+    UIContext::instance().sprites_window->show();
+    UIContext::instance().configure_sprites_window();
+}
+
 void MenuHandler::close()
 {
     if (UIContext::instance().registers_window && UIContext::instance().registers_window->isActive())
@@ -137,6 +143,10 @@ void MenuHandler::close()
     else if (UIContext::instance().memory_window && UIContext::instance().memory_window->isActive())
     {
         UIContext::instance().memory_window->close();
+    }
+    else if (UIContext::instance().memory_window && UIContext::instance().sprites_window->isActive())
+    {
+        UIContext::instance().sprites_window->close();
     }
     else if (UIContext::instance().main_window)
     {

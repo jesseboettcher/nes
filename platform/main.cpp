@@ -101,6 +101,18 @@ void create_windows()
 
     ui.configure_registers_window();
 
+    // registers window
+    QQmlComponent sprites_component(&ui.engine, QUrl(QStringLiteral("qrc:/nes_qt/sprites.qml")));
+    QObject* sprites_object = sprites_component.create();
+
+    ui.sprites_window = qobject_cast<UIWindow*>(sprites_object);
+
+    ui.sprites_window->setMinimumSize(ui.sprites_window->geometry().size());
+    ui.sprites_window->setMaximumSize(ui.sprites_window->geometry().size());
+
+    ui.configure_sprites_window();
+
+    // make sure main is activated, to get all the keyboard input
     ui.main_window->activateWindow();
 }
 
@@ -166,15 +178,18 @@ void create_menus()
 
     QAction *show_memory_action = new QAction("Memory", ui.menu_bar);
     QAction *show_registers_action = new QAction("Registers", ui.menu_bar);
+    QAction *show_sprites_action = new QAction("Sprites", ui.menu_bar);
 
     window_menu->addAction(close_action);
     window_menu->addSeparator();
     window_menu->addAction(show_memory_action);
     window_menu->addAction(show_registers_action);
+    window_menu->addAction(show_sprites_action);
 
     QObject::connect(close_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::close);
     QObject::connect(show_memory_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::show_memory);
     QObject::connect(show_registers_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::show_registers);
+    QObject::connect(show_sprites_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::show_sprites);
 }
 
 int main(int argc, char *argv[])

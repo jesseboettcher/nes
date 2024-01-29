@@ -25,6 +25,7 @@ public slots:
     void close();
     void show_registers();
     void show_memory();
+    void show_sprites();
 
 private:
 	void start_nes(std::filesystem::path path);

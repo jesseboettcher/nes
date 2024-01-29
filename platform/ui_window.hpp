@@ -3,6 +3,7 @@
 #include <QMainWindow>
 #include <QQuickWindow>
 
+#include <optional>
 #include <unordered_map>
 
 #include <glog/logging.h>
@@ -27,13 +28,16 @@ public:
 protected:
     virtual void closeEvent(QCloseEvent *ev)
     {
-        close_callback_();
+        if (close_callback_.has_value())
+        {
+            close_callback_.value();
+        }
         ev->ignore();
         hide();
     }
 
 private:
-    std::function<void()> close_callback_;
+    std::optional<std::function<void()>> close_callback_;
 };
 
 class UIMainWindow : public QMainWindow
