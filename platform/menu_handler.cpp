@@ -23,7 +23,11 @@ void MenuHandler::start_nes(std::filesystem::path path)
 
     cartridge = std::make_unique<NesFileParser>(path);
 
-    UIContext::instance().nes->load_cartridge(std::move(cartridge));
+    if (!UIContext::instance().nes->load_cartridge(std::move(cartridge)))
+    {
+        // failed to load cartridge
+        return;
+    }
 
     vm_thread_ = new std::thread([this]{ CommandPrompt::instance().launch_prompt(*UIContext::instance().nes); });
 }

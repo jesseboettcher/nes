@@ -74,27 +74,42 @@ class NesFileParser
 {
 	// Parser for the .nes file format type: https://www.nesdev.org/wiki/INES
 public:
+	enum class Format
+	{
+		Unknown,
+		iNES,
+		iNES2
+	};
+
 	NesFileParser(std::filesystem::path path);
 	NesFileParser(std::span<uint8_t> buffer);
 
+	// Returns true if successful
+	bool parse();
+
 	bool valid() const;
+
+	Format format() const { return format_; }
 
 	uint8_t mapper() const;
 
-	// PRG ROM is specified in terms of 16kb units
-	uint8_t num_prg_rom_units() const { return buffer_[4]; }
-	uint16_t sizeof_prg_rom() const{ return num_prg_rom_units() * 16 * 1024; }
-
-	// PRG ROM is specified in terms of 8kb units
-	uint8_t num_chr_rom_units() const{ return buffer_[5]; }
-	uint16_t sizeof_chr_rom() const{ return num_chr_rom_units() * 8 * 1024; }
+	uint32_t sizeof_prg_rom() const;
+	uint32_t sizeof_chr_rom() const;
 
 	std::span<uint8_t> prg_rom() const;
 	std::optional<std::span<uint8_t>> chr_rom() const;
 
+	friend std::ostream& operator << (std::ostream& os, const NesFileParser &f);
+
 private:
 	bool has_trainer() const;
+	bool has_battery() const { return buffer_[6] & 0x02; }
+	bool horizontal_nametable_mirroring() const { return buffer_[6] & 0x01; }
 	
 	std::span<uint8_t> buffer_;
 	std::shared_ptr<MappedFile> file_;
+
+	Format format_{Format::Unknown};
+
+	std::string name_;
 };

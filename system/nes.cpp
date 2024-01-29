@@ -28,8 +28,10 @@ Nes::~Nes()
 
 }
 
-void Nes::load_cartridge(std::unique_ptr<NesFileParser> cartridge)
+bool Nes::load_cartridge(std::unique_ptr<NesFileParser> cartridge)
 {
+    bool success = true;
+
     user_interrupt();
 
     ppu_.reset();
@@ -37,11 +39,13 @@ void Nes::load_cartridge(std::unique_ptr<NesFileParser> cartridge)
     cartridge_ = std::move(cartridge);
     if (cartridge_)
     {
-        CartridgeInterface::load(processor_, ppu_, *cartridge_);
+        success = CartridgeInterface::load(processor_, ppu_, *cartridge_);
     }
     processor_.reset();
     
     update_state(State::IDLE);
+
+    return success;
 }
 
 void Nes::run_continuous()
@@ -56,7 +60,6 @@ void Nes::run_continuous()
         }
         check_timer();
     }
-    should_exit_ = false;
     update_state(State::IDLE);
 }
 
@@ -72,7 +75,6 @@ void Nes::run()
         }
         check_timer();
     }
-    should_exit_ = false;
     update_state(State::IDLE);
 }
 
@@ -153,6 +155,8 @@ void Nes::update_state(State state)
 
     if (state_ == State::IDLE || state_ == State::OFF)
     {
+        should_exit_ = false;
+
         processor_.print_status();
         update_ui(UI::current_instruction_label, "");
         update_ui_opacity(UI::dimming_rect, 0.3);
