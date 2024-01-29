@@ -90,7 +90,8 @@ void NesPPU::render_pixel()
     const uint8_t pattern_tile_index = get_pattern_tile_index_for_pixel(pixel_x, pixel_y);
 
     // Get the index into the color table from the pattern table tile
-    const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(pixel_x % 8,
+    const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(pattern_table_base_address(),
+                                                                             pixel_x % 8,
                                                                              pixel_y % NAMETABLE_TILE_SIZE,
                                                                              pattern_tile_index);
     // Determine which palette to use
@@ -114,7 +115,8 @@ uint8_t NesPPU::get_pattern_tile_index_for_pixel(uint8_t pixel_x, uint8_t pixel_
     return memory_[nt_addr];;
 }
 
-uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint8_t tile_pixel_x, uint8_t tile_pixel_y,
+uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_base_address,
+                                                        uint8_t tile_pixel_x, uint8_t tile_pixel_y,
                                                         uint8_t pattern_tile_index) const
 {
     // Get the pattern table tile from the value found in the nametable. The patterns have
@@ -124,7 +126,7 @@ uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint8_t tile_pixel_x, ui
     static constexpr uint16_t PATTERNTABLE_WIDTH = 16; // in bytes
     const uint8_t patterntable_x = pattern_tile_index % PATTERNTABLE_WIDTH;
     const uint8_t patterntable_y = pattern_tile_index / PATTERNTABLE_WIDTH;
-    const uint16_t pattern_tile_addr = pattern_table_base_address() |
+    const uint16_t pattern_tile_addr = pattern_table_base_address |
                                        (patterntable_x << 4) |
                                        (patterntable_y << 8) |
                                        tile_pixel_y;
@@ -210,6 +212,8 @@ NesDisplay::Color NesPPU::fetch_color_from_palette(uint8_t palette_index, uint8_
 
 void NesPPU::render_sprites() const
 {
+    LOG_IF(FATAL, sprite_type() == SpriteType::Sprite_8x16) << "sprite size 8x16 not supported yet";
+
     for (int16_t i = 63;i >= 0;i--) // sprite with lower address wins with overlapping sprites
     {
         NesPPU::Sprite s = sprite(i);
@@ -219,15 +223,29 @@ void NesPPU::render_sprites() const
             continue;
         }
 
+        // assert(!s.flip_horizontal());
+        // assert(!s.flip_vertical());
+
         for (uint8_t p = 0;p < NAMETABLE_TILE_SIZE * NAMETABLE_TILE_SIZE;p++)
         {
             uint8_t tile_pixel_x = p % NAMETABLE_TILE_SIZE;
             uint8_t tile_pixel_y = p / NAMETABLE_TILE_SIZE;
+
             uint8_t pixel_x = s.x_pos + tile_pixel_x;
             uint8_t pixel_y = s.y_pos + tile_pixel_y + 1; // sprite data is delayed by one scanline https://www.nesdev.org/wiki/PPU_OAM
+
+            if (s.flip_horizontal())
+            {
+                tile_pixel_x = NAMETABLE_TILE_SIZE - (p % NAMETABLE_TILE_SIZE) - 1;
+            }
+            if (s.flip_vertical())
+            {
+                tile_pixel_y = NAMETABLE_TILE_SIZE - (p / NAMETABLE_TILE_SIZE) - 1;
+            }
             
             // Get the index into the color table from the pattern table tile
-            const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(tile_pixel_x,
+            const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(sprite_pattern_table_address(),
+                                                                                     tile_pixel_x,
                                                                                      tile_pixel_y,
                                                                                      s.tile_index);
             if (colortable_index == 0)
@@ -236,7 +254,7 @@ void NesPPU::render_sprites() const
             }
             
             // Determine which palette to use
-            const uint8_t palette_index = 4 + (s.attributes & 0x3); // + 4?
+            const uint8_t palette_index = 4 + (s.attributes & 0x3);
 
             // Retrieve the RGB color for this pixel
             const NesDisplay::Color pixel_color = fetch_color_from_palette(palette_index, colortable_index);
@@ -420,6 +438,29 @@ uint16_t NesPPU::nametable_base_address()
     }
     assert(false);
     return 0;
+}
+
+uint16_t NesPPU::sprite_pattern_table_address() const
+{
+    switch(processor_.memory()[PPUCTRL] & PPUCTRL_SpriteTable_Addr)
+    {
+        case 0:
+            return 0x0000;
+
+        case PPUCTRL_SpriteTable_Addr:
+            return 0x1000;
+    }
+    assert(false);
+    return 0;
+}
+
+NesPPU::SpriteType NesPPU::sprite_type() const
+{
+    if (processor_.memory()[PPUCTRL] & PPUCTRL_SpriteSize_Select)
+    {
+        return SpriteType::Sprite_8x16;
+    }
+    return SpriteType::Sprite_8x8;
 }
 
 uint16_t NesPPU::ppu_addr_increment_amount()

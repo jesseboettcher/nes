@@ -58,14 +58,6 @@ public:
 protected:
     virtual void keyPressEvent(QKeyEvent *event) override
     {
-        static bool printed = false;
-
-        if (not printed)
-        {
-            LOG(INFO) << event->key();
-            printed = true;
-        }
-
         pressed_keys_[event->key()] = true;
     }
 

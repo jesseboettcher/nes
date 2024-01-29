@@ -30,6 +30,7 @@ bool CartridgeInterface::load(Processor6502& processor, NesPPU& ppu, const NesFi
 	{
 		std::copy(maybe_chr_rom->begin(), maybe_chr_rom->end(), ppu.memory().begin());
 	}
+	return true;
 }
 
 void CartridgeInterface::load(Processor6502& processor, NesPPU&, const MappedFile& generic_rom_file)
