@@ -84,6 +84,12 @@ void update_ui_memory_view(const Memory& memory)
                            QString::fromStdString(std::string(UI_LIGHT_BLACK)));
 }
 
+void update_ui_sprites_view(const std::vector<NesPPU::Sprite>& sprite_data)
+{
+    UIContext& ui = UIContext::instance();
+    ui.sprites_model.update(sprite_data);
+}
+
 bool is_button_pressed(Joypads::Button button)
 {
     static const std::unordered_map<Joypads::Button, int> button_to_key_map = {

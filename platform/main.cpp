@@ -213,6 +213,7 @@ int main(int argc, char *argv[])
 
     ui.engine.rootContext()->setContextProperty("UIController", &ui.controller);
     ui.engine.rootContext()->setContextProperty("menu_handler", &ui.menu_handler);
+    ui.engine.rootContext()->setContextProperty("SpritesModel", &ui.sprites_model);
 
     create_windows();
     create_menus();

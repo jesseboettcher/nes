@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platform/menu_handler.hpp"
+#include "platform/sprites_model.hpp"
 #include "platform/ui_controller.hpp"
 #include "platform/ui_window.hpp"
 #include "system/nes.hpp"
@@ -33,6 +34,7 @@ public:
 	QMenuBar * menu_bar{nullptr};
 
 	MenuHandler menu_handler;
+	SpritesModel sprites_model;
 	UIController controller;
 
 	void configure_registers_window();

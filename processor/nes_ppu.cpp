@@ -1,5 +1,6 @@
 #include "processor/nes_ppu.hpp"
 
+#include "platform/ui_properties.hpp"
 #include "processor/processor_6502.hpp"
 #include "processor/utils.hpp"
 
@@ -214,9 +215,12 @@ void NesPPU::render_sprites() const
 {
     LOG_IF(FATAL, sprite_type() == SpriteType::Sprite_8x16) << "sprite size 8x16 not supported yet";
 
+    std::vector<Sprite> sprites;
+
     for (int16_t i = 63;i >= 0;i--) // sprite with lower address wins with overlapping sprites
     {
         NesPPU::Sprite s = sprite(i);
+        sprites.push_back(s);
         
         if (s.tile_index == 0)
         {
@@ -263,6 +267,7 @@ void NesPPU::render_sprites() const
             display_.draw_pixel(pixel_x, pixel_y, pixel_color);
         }
     }
+    update_ui_sprites_view(sprites);
 }
 
 NesPPU::Sprite NesPPU::sprite(uint16_t index) const

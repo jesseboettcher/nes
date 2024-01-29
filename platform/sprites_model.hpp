@@ -1,0 +1,44 @@
+#pragma once
+
+#include "lib/magic_enum.hpp"
+#include "processor/nes_ppu.hpp"
+
+#include <QAbstractListModel>
+#include <QStringList>
+
+#include <sstream>
+
+class SpritesModel : public QAbstractListModel
+{
+    Q_OBJECT
+
+public:
+    explicit SpritesModel(QObject *parent = nullptr) {}
+
+    enum class DataRoles
+    {
+        SpriteIndex = Qt::UserRole + 1,
+        SpritePosition,
+        SpriteAttributes,
+        SpriteTileIndex,
+
+        LAST_ROLE_INDEX
+    };
+
+    void update(const std::vector<NesPPU::Sprite>& sprite_data);
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override
+    {
+        return sprite_data_.size();
+    }
+
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+
+    QHash<int, QByteArray> roleNames() const override;
+
+    void addData(const QString &text);
+
+private:
+    QStringList dataList;
+    std::vector<NesPPU::Sprite> sprite_data_;
+};
