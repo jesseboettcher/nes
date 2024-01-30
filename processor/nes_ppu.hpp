@@ -142,6 +142,7 @@ private:
 
     // Make vram updates based on any activity on PPUADDR and PPUDATA
     void handle_ppu_data_register();
+    uint8_t read_ppu_data();
 
     // Make vram updates based on any activity on OMADMA
     void handle_oam_dma_register();

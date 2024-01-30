@@ -16,8 +16,8 @@ NesPPU::NesPPU(Processor6502& processor, NesDisplay& display)
     processor_.memory().add_write_notifier(OAMDATA, std::bind(&NesPPU::set_oamdata_written, this));
     processor_.memory().add_write_notifier(PPUADDR, std::bind(&NesPPU::set_ppuaddr_written, this));
     processor_.memory().add_write_notifier(PPUDATA, std::bind(&NesPPU::set_ppudata_written, this));
-    processor_.memory().add_write_notifier(PPUDATA, std::bind(&NesPPU::set_ppudata_written, this));
     processor_.memory().add_write_notifier(OAMDMA, std::bind(&NesPPU::set_omadma_written, this));
+    processor_.memory().add_peripheral_connection(PPUDATA, std::bind(&NesPPU::read_ppu_data, this));
 }
 
 NesPPU::~NesPPU()
@@ -395,9 +395,24 @@ void NesPPU::handle_ppu_data_register()
         LOG_IF(ERROR, ppu_addr_write_count % 2 != 0) << "Error: "
                 << " write to PPUDATA without a fully set PPUADDR";
 
-        memory_[ppu_data_addr_] = processor_.cmemory()[PPUDATA];
+        // memory view bypasses the peripheral connection, so we can see
+        // what the program has written to memory instead of getting what
+        // is provided by this peripheral
+        const Memory::View processor_mem_view = processor_.memory().view(PPUDATA, 1);
+
+        memory_[ppu_data_addr_] = processor_mem_view[PPUDATA];
         ppu_data_addr_ += ppu_addr_increment_amount();
     }
+}
+
+uint8_t NesPPU::read_ppu_data()
+{
+    LOG(FATAL) << "assertion for notification when a game actually uses this";
+    assert(ppu_data_addr_ <= 0x3FFF);
+
+    ppu_data_addr_ += ppu_addr_increment_amount();
+
+    return memory_[ppu_data_addr_];
 }
 
 void NesPPU::handle_oam_dma_register()
