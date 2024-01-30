@@ -56,6 +56,12 @@ public:
     {
         using Canvas = NesDisplay::Color[8][8];
 
+        enum class Layer
+        {
+            Background,
+            Foreground
+        };
+
         Sprite(uint8_t y, uint8_t index, uint8_t attr, uint8_t x)
         : y_pos(y)
         , x_pos(x)
@@ -72,7 +78,7 @@ public:
 
         bool flip_vertical() const { return attributes & 0x80; }
         bool flip_horizontal() const { return attributes & 0x40; }
-        bool is_background_sprite() const { return attributes & 0x20; }
+        Layer layer() const { return (attributes & 0x20) ? Layer::Background : Layer::Foreground; }
     };
     
     NesPPU(Processor6502& processor, NesDisplay& display);
@@ -124,8 +130,12 @@ private:
     // Draws the background pixel for the current cycle
     void render_pixel();
 
-    // Draws all the sprites at once
-    void render_sprites() const;
+    // Read oam sprite data
+    // Populates a list of Sprite structures with data from OAM
+    void read_sprite_oam();
+
+    // Draws all the foreground or background sprites at once
+    void render_sprites(Sprite::Layer layer) const;
 
     // Make vram updates based on any activity on OAMADDR and OAMDATA
     void handle_oam_data_register();
@@ -165,6 +175,8 @@ private:
     NesDisplay& display_;
     VideoMemory memory_;
     OAMMemory oam_memory_;
+
+    std::vector<Sprite> sprites_;
 
     // scanline_
     // 0-239 rendering

@@ -52,7 +52,7 @@ bool NesPPU::step()
 
     if (check_rendering_falling_edge())
     {
-        render_sprites(); // TODO integrate with proper timing and background rendering
+        render_sprites(Sprite::Layer::Foreground); // TODO integrate with proper timing and background rendering
         display_.render();
     }
 
@@ -63,7 +63,10 @@ bool NesPPU::step()
         if (processor_.cmemory()[PPUCTRL] & PPUCTRL_Generate_NMI)
         {
             processor_.set_non_maskable_interrupt();
-            display_.clear_screen();
+            display_.clear_screen(fetch_color_from_palette(0, 0)); // background color
+
+            read_sprite_oam(); // TODO proper timing for reading oam
+            render_sprites(Sprite::Layer::Background); // TODO integrate with proper timing and background rendering
         }   
     }
 
@@ -104,6 +107,7 @@ void NesPPU::render_pixel()
     if (colortable_index == 0)
     {
         // transparent
+        return;
     }
 
     // Draw the pixel!
@@ -216,17 +220,15 @@ NesDisplay::Color NesPPU::fetch_color_from_palette(uint8_t palette_index, uint8_
     return color;
 }
 
-void NesPPU::render_sprites() const
+void NesPPU::read_sprite_oam()
 {
-    LOG_IF(FATAL, sprite_type() == SpriteType::Sprite_8x16) << "sprite size 8x16 not supported yet";
+    sprites_.clear();
 
-    std::vector<Sprite> sprites;
-
-    for (int16_t i = 63;i >= 0;i--) // sprite with lower address wins with overlapping sprites
+    for (int16_t i = 0;i < 64;i++)
     {
-        sprites.push_back(sprite(i));
+        sprites_.push_back(sprite(i));
 
-        NesPPU::Sprite& s = sprites.back();
+        NesPPU::Sprite& s = sprites_.back();
 
         if (s.tile_index == 0)
         {
@@ -234,6 +236,31 @@ void NesPPU::render_sprites() const
         }
 
         s.canvas = std::make_shared<Sprite::Canvas>();
+    }
+}
+
+void NesPPU::render_sprites(Sprite::Layer layer) const
+{
+    LOG_IF(FATAL, sprite_type() == SpriteType::Sprite_8x16) << "sprite size 8x16 not supported yet";
+
+    if (sprites_.size() == 0)
+    {
+        return;
+    }
+
+    for (int16_t i = 63;i >= 0;i--) // sprite with lower address wins with overlapping sprites
+    {
+        const NesPPU::Sprite& s = sprites_[i];
+
+        if (layer != s.layer()) // foreground / background check
+        {
+            continue;
+        }
+
+        if (s.tile_index == 0)
+        {
+            continue;
+        }
 
         for (uint8_t p = 0;p < NAMETABLE_TILE_SIZE * NAMETABLE_TILE_SIZE;p++)
         {
@@ -263,7 +290,7 @@ void NesPPU::render_sprites() const
             {
                 continue; // transparent
             }
-            
+
             // Determine which palette to use
             const uint8_t palette_index = 4 + (s.attributes & 0x3);
 
@@ -275,7 +302,11 @@ void NesPPU::render_sprites() const
             s.canvas.get()[debug_tile_pixel_y][debug_tile_pixel_x] = pixel_color;
         }
     }
-    update_ui_sprites_view(sprites);
+
+    if (layer == Sprite::Layer::Foreground)
+    {
+        update_ui_sprites_view(sprites_);
+    }
 }
 
 NesPPU::Sprite NesPPU::sprite(uint16_t index) const

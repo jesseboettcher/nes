@@ -23,16 +23,22 @@ SpriteImageProvider::SpriteImageProvider()
 void SpritesModel::update(const std::vector<NesPPU::Sprite>& sprite_data)
 {
     beginResetModel();
+
     sprite_data_ = sprite_data;
 
     image_provider_.sprite_images_.clear();
 
-    for (auto& s : sprite_data_)
+    for (int32_t r = 0;r < sprite_data_.size();r++)
     {
+        NesPPU::Sprite& s = sprite_data_[r];
+
         const uchar* buffer = s.canvas ? (const uchar*)s.canvas.get() : (const uchar*)image_provider_.dummy_canvas_;
-        QImage img = QImage(buffer, 8, 8, QImage::Format_RGBA8888);
+        QImage img = QImage(buffer, 8, 8, QImage::Format_RGBA8888).copy();
+
+        assert(!img.isNull());
         image_provider_.sprite_images_.push_back(img);
     }
+    update_count_++;
 
     endResetModel();
 }
@@ -72,7 +78,10 @@ QVariant SpritesModel::data(const QModelIndex &index, int role) const
             break;
 
         case DataRoles::SpriteTileImage:
-            strstream << "image://sprite_image_provider/" << index.row();
+            // IMPORTANT: update_count_ makes sure that the URL for the images is different every
+            // time image data is updated. Without unique URLS, there is QML side caching that
+            // causes unpredictable behavior.
+            strstream << "image://sprite_image_provider/" << index.row() << "_" << update_count_;
             break;
 
         case DataRoles::LAST_ROLE_INDEX:

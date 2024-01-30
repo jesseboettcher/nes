@@ -15,10 +15,16 @@ public:
 
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override
     {
-        int32_t index = std::stoi(id.toStdString());
-        return sprite_images_[index];
+        std::string idstr = id.toStdString();
+
+        // The id is provided in the format "<image index>_<unique number>"
+        size_t pos = idstr.find('+');
+        std::string image_num = idstr.substr(0, pos);
+
+        return sprite_images_[std::stoi(image_num)];
     }
 
+    std::vector<QImage> last_sprite_images_;
     std::vector<QImage> sprite_images_;
     NesPPU::Sprite::Canvas dummy_canvas_;
 };
@@ -61,4 +67,6 @@ private:
     std::vector<NesPPU::Sprite> sprite_data_;
     std::vector<QImage> sprite_images_;
     SpriteImageProvider image_provider_;
+
+    int32_t update_count_;
 };
