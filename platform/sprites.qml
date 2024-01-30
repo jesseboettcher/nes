@@ -88,6 +88,14 @@ UIWindow
                         color: "#455760"
                         text: model.SpriteTileIndex
                     }
+                    Image
+                    {
+                        width: 16
+                        height: 16
+                        fillMode: Image.PreserveAspectFit
+                        source: model.SpriteTileImage
+
+                    }
                 }
             }
         }

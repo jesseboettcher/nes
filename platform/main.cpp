@@ -214,6 +214,7 @@ int main(int argc, char *argv[])
     ui.engine.rootContext()->setContextProperty("UIController", &ui.controller);
     ui.engine.rootContext()->setContextProperty("menu_handler", &ui.menu_handler);
     ui.engine.rootContext()->setContextProperty("SpritesModel", &ui.sprites_model);
+    ui.engine.addImageProvider(QLatin1String("sprite_image_provider"), ui.sprites_model.image_provider());
 
     create_windows();
     create_menus();

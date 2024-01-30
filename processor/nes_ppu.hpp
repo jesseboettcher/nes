@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <memory>
 
 class Processor6502;
 
@@ -21,6 +22,12 @@ public:
     static constexpr uint8_t  PPUCTRL_Backgroundtable_Select = 0x10;
     static constexpr uint8_t  PPUCTRL_SpriteSize_Select = 0x20;
     static constexpr uint16_t PPUMASK   = 0x2001;
+    static constexpr uint16_t PPUMASK_GREYSCALE   = 0x01; // TODO
+    static constexpr uint16_t PPUMASK_SHOW_BACKGROUND_LEFT_EDGE   = 0x02; // TODO
+    static constexpr uint16_t PPUMASK_SHOW_SPRITES_LEFT_EDGE   = 0x04; // TODO
+    static constexpr uint16_t PPUMASK_BACKGROUND   = 0x08; // TODO
+    static constexpr uint16_t PPUMASK_SPRITES   = 0x10; // TODO
+    static constexpr uint16_t PPUMASK_COLOR_EMPHASIS   = 0xE0; // TODO
     static constexpr uint16_t PPUSTATUS = 0x2002;
     static constexpr uint8_t  PPUSTATUS_vblank = 0x80;
     static constexpr uint16_t OAMADDR   = 0x2003;
@@ -47,13 +54,25 @@ public:
 
     struct Sprite
     {
+        using Canvas = NesDisplay::Color[8][8];
+
+        Sprite(uint8_t y, uint8_t index, uint8_t attr, uint8_t x)
+        : y_pos(y)
+        , x_pos(x)
+        , attributes(attr)
+        , tile_index(index)
+        {}
+
         uint8_t y_pos;
         uint8_t tile_index;
         uint8_t attributes;
         uint8_t x_pos;
 
+        std::shared_ptr<Canvas> canvas;
+
         bool flip_vertical() const { return attributes & 0x80; }
         bool flip_horizontal() const { return attributes & 0x40; }
+        bool is_background_sprite() const { return attributes & 0x20; }
     };
     
     NesPPU(Processor6502& processor, NesDisplay& display);

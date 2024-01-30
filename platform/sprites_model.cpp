@@ -11,11 +11,30 @@ namespace magic_enum::customize
     };
 }
 
+SpriteImageProvider::SpriteImageProvider()
+ : QQuickImageProvider(QQuickImageProvider::Image)
+{
+    for (int32_t i = 0;i < 8*8;i++)
+    {
+        dummy_canvas_[i/8][i%8] = NesDisplay::Color({0, 0, 0, 0});
+    }
+}
+
 void SpritesModel::update(const std::vector<NesPPU::Sprite>& sprite_data)
 {
-	beginResetModel();
-	sprite_data_ = sprite_data;
-	endResetModel();
+    beginResetModel();
+    sprite_data_ = sprite_data;
+
+    image_provider_.sprite_images_.clear();
+
+    for (auto& s : sprite_data_)
+    {
+        const uchar* buffer = s.canvas ? (const uchar*)s.canvas.get() : (const uchar*)image_provider_.dummy_canvas_;
+        QImage img = QImage(buffer, 8, 8, QImage::Format_RGBA8888);
+        image_provider_.sprite_images_.push_back(img);
+    }
+
+    endResetModel();
 }
 
 QHash<int, QByteArray> SpritesModel::roleNames() const
@@ -41,7 +60,7 @@ QVariant SpritesModel::data(const QModelIndex &index, int role) const
 
         case DataRoles::SpritePosition:
             strstream << "(" << static_cast<int32_t>(sprite_data_[index.row()].x_pos)
-            		  << ", " << static_cast<int32_t>(sprite_data_[index.row()].y_pos) << ")";
+                      << ", " << static_cast<int32_t>(sprite_data_[index.row()].y_pos) << ")";
             break;
 
         case DataRoles::SpriteAttributes:
@@ -50,6 +69,10 @@ QVariant SpritesModel::data(const QModelIndex &index, int role) const
 
         case DataRoles::SpriteTileIndex:
             strstream << static_cast<int32_t>(sprite_data_[index.row()].tile_index);
+            break;
+
+        case DataRoles::SpriteTileImage:
+            strstream << "image://sprite_image_provider/" << index.row();
             break;
 
         case DataRoles::LAST_ROLE_INDEX:

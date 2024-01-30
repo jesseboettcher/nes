@@ -101,6 +101,11 @@ void NesPPU::render_pixel()
     // Retrieve the RGB color for this pixel
     const NesDisplay::Color pixel_color = fetch_color_from_palette(palette_index, colortable_index);
 
+    if (colortable_index == 0)
+    {
+        // transparent
+    }
+
     // Draw the pixel!
     display_.draw_pixel(pixel_x, pixel_y, pixel_color);
 }
@@ -219,21 +224,23 @@ void NesPPU::render_sprites() const
 
     for (int16_t i = 63;i >= 0;i--) // sprite with lower address wins with overlapping sprites
     {
-        NesPPU::Sprite s = sprite(i);
-        sprites.push_back(s);
-        
+        sprites.push_back(sprite(i));
+
+        NesPPU::Sprite& s = sprites.back();
+
         if (s.tile_index == 0)
         {
             continue;
         }
 
-        // assert(!s.flip_horizontal());
-        // assert(!s.flip_vertical());
+        s.canvas = std::make_shared<Sprite::Canvas>();
 
         for (uint8_t p = 0;p < NAMETABLE_TILE_SIZE * NAMETABLE_TILE_SIZE;p++)
         {
             uint8_t tile_pixel_x = p % NAMETABLE_TILE_SIZE;
             uint8_t tile_pixel_y = p / NAMETABLE_TILE_SIZE;
+            uint8_t debug_tile_pixel_x = tile_pixel_x;
+            uint8_t debug_tile_pixel_y = tile_pixel_y;
 
             uint8_t pixel_x = s.x_pos + tile_pixel_x;
             uint8_t pixel_y = s.y_pos + tile_pixel_y + 1; // sprite data is delayed by one scanline https://www.nesdev.org/wiki/PPU_OAM
@@ -265,6 +272,7 @@ void NesPPU::render_sprites() const
 
             // Draw the pixel!
             display_.draw_pixel(pixel_x, pixel_y, pixel_color);
+            s.canvas.get()[debug_tile_pixel_y][debug_tile_pixel_x] = pixel_color;
         }
     }
     update_ui_sprites_view(sprites);
@@ -272,10 +280,19 @@ void NesPPU::render_sprites() const
 
 NesPPU::Sprite NesPPU::sprite(uint16_t index) const
 {
-    const uint8_t* oam_p = std::addressof(oam_memory_[index * sizeof(Sprite)]);
-    const Sprite* sprite_p = reinterpret_cast<const Sprite*>(oam_p);
-    
-    return *sprite_p;
+    struct OamSprite
+    {
+        // maps to the data layout of oam data
+        uint8_t y_pos;
+        uint8_t tile_index;
+        uint8_t attributes;
+        uint8_t x_pos;
+    };
+
+    const uint8_t* oam_p = std::addressof(oam_memory_[index * sizeof(OamSprite)]);
+    const OamSprite* sprite_p = reinterpret_cast<const OamSprite*>(oam_p);
+
+    return Sprite(sprite_p->y_pos, sprite_p->tile_index, sprite_p->attributes, sprite_p->x_pos);
 }
 
 void NesPPU::handle_oam_data_register()
@@ -360,16 +377,6 @@ void NesPPU::handle_oam_dma_register()
         for (uint16_t i = 0;i < oam_memory_.size();i++)
         {
             oam_memory_[i] = processor_.cmemory()[oam_src_addr + i];
-        }
-        // LOG(ERROR) << "OAMDMA " << std::hex << "0x" << oam_src_addr;
-        for (uint16_t i = 0;i < 64;i++)
-        {
-            Sprite s = sprite(i);
-            if (s.tile_index == 0)
-            {
-                continue;
-            }
-            // std::cout << "sprite " << i << ": " << s << std::endl;
         }
     }
 }
