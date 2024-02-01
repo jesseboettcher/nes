@@ -28,6 +28,7 @@ NesPPU::~NesPPU()
 void NesPPU::reset()
 {
     memory_.clear();
+    display_.clear_screen(NesDisplay::Color({0x00, 0x00, 0x00, 0xFF}));
 }
 
 void NesPPU::run()
@@ -363,8 +364,9 @@ void NesPPU::handle_oam_data_register()
 
         // memory_[oam_data_addr_] = processor_.cmemory()[OAMDATA];
         // oam_data_addr_ += oam_addr_increment_amount();
-        LOG(INFO) << "write OAMDATA at " << std::hex << "0x" << oam_data_addr_ << " data 0x" << +memory_[oam_data_addr_];
-//        assert(false);
+
+        // mark fatal until a game uses this
+        LOG(FATAL) << "write OAMDATA at " << std::hex << "0x" << oam_data_addr_ << " data 0x" << +memory_[oam_data_addr_];
     }
 }
 

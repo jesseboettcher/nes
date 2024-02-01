@@ -30,6 +30,7 @@ public:
     static constexpr uint16_t PPUMASK_COLOR_EMPHASIS   = 0xE0; // TODO
     static constexpr uint16_t PPUSTATUS = 0x2002;
     static constexpr uint8_t  PPUSTATUS_vblank = 0x80;
+    static constexpr uint8_t  PPUSTATUS_sprite0_hit = 0x40;
     static constexpr uint16_t OAMADDR   = 0x2003;
     static constexpr uint16_t OAMDATA   = 0x2004;
     static constexpr uint16_t PPUSCROLL = 0x2005;

@@ -10,4 +10,6 @@
 // #define DISPLAY_TYPE DISPLAY_HEADLESS
 #define DISPLAY_TYPE DISPLAY_LINUX
 
+static constexpr bool ENABLE_CPU_LOGGING = false;
+
 #endif  // __FLAGS_H__

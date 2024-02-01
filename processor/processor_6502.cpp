@@ -10,18 +10,35 @@
 #include <sstream>
 #include <thread>
 
+void write_pc_to_file(unsigned int pc)
+{
+    std::ofstream outFile("/tmp/nes_pc", std::ios::out | std::ios::trunc);
+    if (!outFile)
+    {
+        std::cerr << "Failed to open file: " << "/tmp/nes_pc" << std::endl;
+        return;
+    }
+
+    // matching the output of disassembler for PC formatting
+    outFile << std::setfill('0') << std::uppercase << std::setw(4) << std::hex << pc;
+    outFile.close();
+}
+
 Processor6502::Processor6502()
 {
 	std::cout << "Launching Processor6502...\n";
 
     instr_table_ = make_instruction_table();
-    
-    std::filesystem::remove("/tmp/vnes.log");
-    log_.open("/tmp/vnes.log");
-    if (!log_.is_open())
-    {
-        LOG(WARNING) << "Could not write /tmp/vnes.log";
-    }
+
+	if constexpr (ENABLE_CPU_LOGGING)
+	{
+	    std::filesystem::remove("/tmp/vnes.log");
+	    log_.open("/tmp/vnes.log");
+	    if (!log_.is_open())
+	    {
+	        LOG(WARNING) << "Could not write /tmp/vnes.log";
+	    }
+	}
 }
 
 Processor6502::~Processor6502()
@@ -96,15 +113,7 @@ bool Processor6502::step()
 	}
 
 	wait_for_cycle_count(1);
-	// print_status();
-    
-//    if (pending_operation_.values.size() == 2 &&
-//        pending_operation_.values[0] == 0x6C &&
-//        pending_operation_.values[1] == 0xE9)
-//    if (registers_.PC == 0xE514)
-//    {
-//        return false;
-//    }
+
 	return should_continue;
 }
 
@@ -409,6 +418,8 @@ void Processor6502::print_status()
     update_ui(UI::x_reg_label, strformat("0x%04X", registers_.X), UI_NEAR_BLACK);
     update_ui(UI::y_reg_label, strformat("0x%04X", registers_.Y), UI_NEAR_BLACK);
     update_ui(UI::sp_reg_label, strformat("0x%04X", registers_.SP), UI_NEAR_BLACK);
+
+	write_pc_to_file(registers_.PC);
 }
 
 void Processor6502::dim_status()
