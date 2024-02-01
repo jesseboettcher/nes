@@ -400,7 +400,7 @@ void NesPPU::handle_ppu_data_register()
         // memory view bypasses the peripheral connection, so we can see
         // what the program has written to memory instead of getting what
         // is provided by this peripheral
-        const Memory::View processor_mem_view = processor_.memory().view(PPUDATA, 1);
+        const AddressBus::View processor_mem_view = processor_.memory().view(PPUDATA, 1);
 
         memory_[ppu_data_addr_] = processor_mem_view[PPUDATA];
         ppu_data_addr_ += ppu_addr_increment_amount();

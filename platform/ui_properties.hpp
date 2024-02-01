@@ -40,7 +40,7 @@ void update_ui(UI property, std::optional<std::string_view> str,
 
 void update_ui_opacity(UI property, double opacity);
 
-void update_ui_memory_view(const Memory& memory);
+void update_ui_memory_view(const AddressBus& memory);
 void update_ui_sprites_view(const std::vector<NesPPU::Sprite>& sprite_data);
 
 bool is_button_pressed(Joypads::Button button);

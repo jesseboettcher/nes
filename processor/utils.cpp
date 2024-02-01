@@ -18,7 +18,7 @@ std::ostream& operator << (std::ostream& os, const Instruction& i)
 	return os;
 }
 
-std::ostream& operator << (std::ostream& os, const Memory::View v)
+std::ostream& operator << (std::ostream& os, const AddressBus::View v)
 {
 	os << std::hex << std::setfill('0');
 	os << "\n-------------\n";
@@ -86,7 +86,7 @@ std::ostream& operator << (std::ostream& os, const VideoMemory::View v)
 	return os;
 }
 
-std::ostream& operator << (std::ostream& os, const Memory::StackView v)
+std::ostream& operator << (std::ostream& os, const AddressBus::StackView v)
 {
 	os << "\n-------------\n";
 	os << "  Stack (" << v.size() << ")\n";

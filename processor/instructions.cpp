@@ -6,13 +6,13 @@
 
 #include <array>
 
-static uint8_t ADC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t ADC(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A + M + C -> A, C
     // N    Z   C   I   D   V
     // +    +   +   -   -   +
     uint8_t extra_cycles_used = i.fetch_crossed_page_boundary ? 1 : 0;
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     uint8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
     uint8_t carry = r.is_status_register_flag_set(Registers::CARRY_FLAG);
 
@@ -58,13 +58,13 @@ static uint8_t ADC(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t AND(const Instruction& i, Registers& r, Memory& m)
+static uint8_t AND(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A AND M -> A
     // N   Z   C   I   D   V
     // +   +   -   -   -   -
     uint8_t extra_cycles_used = i.fetch_crossed_page_boundary ? 1 : 0;
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     uint8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
 
     r.A &= data;
@@ -74,7 +74,7 @@ static uint8_t AND(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t ASL(const Instruction& i, Registers& r, Memory& m)
+static uint8_t ASL(const Instruction& i, Registers& r, AddressBus& m)
 {
     // C <- [76543210] <- 0
     // N   Z   C   I   D   V
@@ -101,7 +101,7 @@ static uint8_t ASL(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t BCC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BCC(const Instruction& i, Registers& r, AddressBus& m)
 {
     uint8_t extra_cycles_used = 0;
 
@@ -122,7 +122,7 @@ static uint8_t BCC(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t BCS(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BCS(const Instruction& i, Registers& r, AddressBus& m)
 {
     uint8_t extra_cycles_used = 0;
 
@@ -143,7 +143,7 @@ static uint8_t BCS(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t BEQ(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BEQ(const Instruction& i, Registers& r, AddressBus& m)
 {
     uint8_t extra_cycles_used = 0;
 
@@ -164,7 +164,7 @@ static uint8_t BEQ(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t BIT(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BIT(const Instruction& i, Registers& r, AddressBus& m)
 {
     // bits 7 and 6 of operand are transfered to bit 7 and 6 of SR (N,V);
     // the zero-flag is set to the result of operand AND accumulator.
@@ -172,7 +172,7 @@ static uint8_t BIT(const Instruction& i, Registers& r, Memory& m)
     // A AND M, M7 -> N, M6 -> V
     // N   Z   C   I   D   V
     // M7  +   -   -   -   M6
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     r.set_status_register_flag(Registers::NEGATIVE_FLAG, cm[i.address()] & 0x80);
     r.set_status_register_flag(Registers::OVERFLOW_FLAG, cm[i.address()] & 0x40);
     r.set_status_register_flag(Registers::ZERO_FLAG, cm[i.address()] & r.A);
@@ -180,7 +180,7 @@ static uint8_t BIT(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t BMI(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BMI(const Instruction& i, Registers& r, AddressBus& m)
 {
     uint8_t extra_cycles_used = 0;
 
@@ -201,7 +201,7 @@ static uint8_t BMI(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t BNE(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BNE(const Instruction& i, Registers& r, AddressBus& m)
 {
     // branch on Z = 0
     // N    Z   C   I   D   V
@@ -226,7 +226,7 @@ static uint8_t BNE(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t BPL(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BPL(const Instruction& i, Registers& r, AddressBus& m)
 {
     uint8_t extra_cycles_used = 0;
 
@@ -247,7 +247,7 @@ static uint8_t BPL(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t BRK(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BRK(const Instruction& i, Registers& r, AddressBus& m)
 {
     // BRK
     // Force Break
@@ -273,7 +273,7 @@ static uint8_t BRK(const Instruction& i, Registers& r, Memory& m)
 
     m.stack_push(r.SP, r.SR());
 
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     r.PC = i.nmi ? (cm[NMI_low_addr] | (cm[NMI_hi_addr] << 8)) :
                    (cm[BRK_low_addr] | (cm[BRK_hi_addr] << 8));
 
@@ -281,7 +281,7 @@ static uint8_t BRK(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t BVC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BVC(const Instruction& i, Registers& r, AddressBus& m)
 {
     uint8_t extra_cycles_used = 0;
 
@@ -302,7 +302,7 @@ static uint8_t BVC(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t BVS(const Instruction& i, Registers& r, Memory& m)
+static uint8_t BVS(const Instruction& i, Registers& r, AddressBus& m)
 {
     uint8_t extra_cycles_used = 0;
 
@@ -323,7 +323,7 @@ static uint8_t BVS(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t CLC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t CLC(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 0 -> C
     // N    Z   C   I   D   V
@@ -333,7 +333,7 @@ static uint8_t CLC(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t CLD(const Instruction& i, Registers& r, Memory& m)
+static uint8_t CLD(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 0 -> D
     // N    Z   C   I   D   V
@@ -343,7 +343,7 @@ static uint8_t CLD(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t CLI(const Instruction& i, Registers& r, Memory& m)
+static uint8_t CLI(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 0 -> D
     // N    Z   C   I   D   V
@@ -353,7 +353,7 @@ static uint8_t CLI(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t CLV(const Instruction& i, Registers& r, Memory& m)
+static uint8_t CLV(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 0 -> D
     // N    Z   C   I   D   V
@@ -363,7 +363,7 @@ static uint8_t CLV(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t CMP(const Instruction& i, Registers& r, Memory& m)
+static uint8_t CMP(const Instruction& i, Registers& r, AddressBus& m)
 {
     // Y - M
     // N    Z   C   I   D   V
@@ -377,7 +377,7 @@ static uint8_t CMP(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t CPX(const Instruction& i, Registers& r, Memory& m)
+static uint8_t CPX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // Y - M
     // N    Z   C   I   D   V
@@ -389,7 +389,7 @@ static uint8_t CPX(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t CPY(const Instruction& i, Registers& r, Memory& m)
+static uint8_t CPY(const Instruction& i, Registers& r, AddressBus& m)
 {
     // Y - M
     // N    Z   C   I   D   V
@@ -402,7 +402,7 @@ static uint8_t CPY(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t DEC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t DEC(const Instruction& i, Registers& r, AddressBus& m)
 {
     // M - 1 -> M
     // N   Z   C   I   D   V
@@ -416,7 +416,7 @@ static uint8_t DEC(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t DEX(const Instruction& i, Registers& r, Memory& m)
+static uint8_t DEX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // X - 1 -> X
     // N   Z   C   I   D   V
@@ -430,7 +430,7 @@ static uint8_t DEX(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t DEY(const Instruction& i, Registers& r, Memory& m)
+static uint8_t DEY(const Instruction& i, Registers& r, AddressBus& m)
 {
     // X - 1 -> X
     // N   Z   C   I   D   V
@@ -444,12 +444,12 @@ static uint8_t DEY(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t EOR(const Instruction& i, Registers& r, Memory& m)
+static uint8_t EOR(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A EOR M -> A
     // N   Z   C   I   D   V
     // +   +   -   -   -   -
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     uint8_t extra_cycles_used = i.fetch_crossed_page_boundary ? 1 : 0;
     uint8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
 
@@ -460,7 +460,7 @@ static uint8_t EOR(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t INC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t INC(const Instruction& i, Registers& r, AddressBus& m)
 {
     // M + 1 -> M
     // N    Z   C   I   D   V
@@ -474,7 +474,7 @@ static uint8_t INC(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t INX(const Instruction& i, Registers& r, Memory& m)
+static uint8_t INX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // Y + 1 -> Y
     // N    Z   C   I   D   V
@@ -488,7 +488,7 @@ static uint8_t INX(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t INY(const Instruction& i, Registers& r, Memory& m)
+static uint8_t INY(const Instruction& i, Registers& r, AddressBus& m)
 {
     // Y + 1 -> Y
     // N    Z   C   I   D   V
@@ -502,7 +502,7 @@ static uint8_t INY(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t JMP(const Instruction& i, Registers& r, Memory& m)
+static uint8_t JMP(const Instruction& i, Registers& r, AddressBus& m)
 {
     // (PC+1) -> PCL
     // (PC+2) -> PCH
@@ -514,7 +514,7 @@ static uint8_t JMP(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t JSR(const Instruction& i, Registers& r, Memory& m)
+static uint8_t JSR(const Instruction& i, Registers& r, AddressBus& m)
 {
     // push (PC+2),
     // (PC+1) -> PCL
@@ -534,13 +534,13 @@ static uint8_t JSR(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t LDA(const Instruction& i, Registers& r, Memory& m)
+static uint8_t LDA(const Instruction& i, Registers& r, AddressBus& m)
 {
     // M -> A
     // N    Z   C   I   D   V
     // +    +   -   -   -   -
 
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
 
     r.A = data;
@@ -551,13 +551,13 @@ static uint8_t LDA(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t LDX(const Instruction& i, Registers& r, Memory& m)
+static uint8_t LDX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // M -> X
     // N    Z   C   I   D   V
     // +    +   -   -   -   -
 
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
 
     r.X = data;
@@ -568,13 +568,13 @@ static uint8_t LDX(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t LDY(const Instruction& i, Registers& r, Memory& m)
+static uint8_t LDY(const Instruction& i, Registers& r, AddressBus& m)
 {
     // M -> Y
     // N    Z   C   I   D   V
     // +    +   -   -   -   -
 
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
 
     r.Y = data;
@@ -585,7 +585,7 @@ static uint8_t LDY(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t LSR(const Instruction& i, Registers& r, Memory& m)
+static uint8_t LSR(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 0 -> [76543210] -> C
     // N   Z   C   I   D   V
@@ -612,19 +612,19 @@ static uint8_t LSR(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t NOP(const Instruction& i, Registers& r, Memory& m)
+static uint8_t NOP(const Instruction& i, Registers& r, AddressBus& m)
 {
     return 0;
 }
 
-static uint8_t ORA(const Instruction& i, Registers& r, Memory& m)
+static uint8_t ORA(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A OR M -> A
     // N   Z   C   I   D   V
     // +   +   -   -   -   -
     uint8_t extra_cycles_used = i.fetch_crossed_page_boundary ? 1 : 0;
 
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
 
     r.A |= data;
@@ -634,20 +634,20 @@ static uint8_t ORA(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t PHA(const Instruction& i, Registers& r, Memory& m)
+static uint8_t PHA(const Instruction& i, Registers& r, AddressBus& m)
 {
     m.stack_push(r.SP, r.A);
     return 0;
 }
 
-static uint8_t PHP(const Instruction& i, Registers& r, Memory& m)
+static uint8_t PHP(const Instruction& i, Registers& r, AddressBus& m)
 {
     // TODO resolve difference in masswerk.at and 6502 dev guide pdf on whether this affects R
     m.stack_push(r.SP, r.SR());
     return 0;
 }
 
-static uint8_t PLA(const Instruction& i, Registers& r, Memory& m)
+static uint8_t PLA(const Instruction& i, Registers& r, AddressBus& m)
 {
     // pull A
     // N   Z   C   I   D   V
@@ -659,7 +659,7 @@ static uint8_t PLA(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t PLP(const Instruction& i, Registers& r, Memory& m)
+static uint8_t PLP(const Instruction& i, Registers& r, AddressBus& m)
 {
     r.set_SR(m.stack_pop(r.SP));
     r.set_status_register_flag(Registers::BREAK_FLAG, false);
@@ -667,7 +667,7 @@ static uint8_t PLP(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t ROL(const Instruction& i, Registers& r, Memory& m)
+static uint8_t ROL(const Instruction& i, Registers& r, AddressBus& m)
 {
     // C <- [76543210] <- C
     // N   Z   C   I   D   V
@@ -694,7 +694,7 @@ static uint8_t ROL(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t ROR(const Instruction& i, Registers& r, Memory& m)
+static uint8_t ROR(const Instruction& i, Registers& r, AddressBus& m)
 {
     // C -> [76543210] -> C
     // N   Z   C   I   D   V
@@ -721,7 +721,7 @@ static uint8_t ROR(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t RTI(const Instruction& i, Registers& r, Memory& m)
+static uint8_t RTI(const Instruction& i, Registers& r, AddressBus& m)
 {
     // RTI
     // Return from Interrupt
@@ -744,7 +744,7 @@ static uint8_t RTI(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t RTS(const Instruction& i, Registers& r, Memory& m)
+static uint8_t RTS(const Instruction& i, Registers& r, AddressBus& m)
 {
     // pull PC, PC+1 -> PC
     // N    Z   C   I   D   V
@@ -761,14 +761,14 @@ static uint8_t RTS(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t SBC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t SBC(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A - M - C -> A
     // N   Z   C   I   D   V
     // +   +   +   -   -   +
     uint8_t extra_cycles_used = i.fetch_crossed_page_boundary ? 1 : 0;
 
-    const Memory& cm = m;
+    const AddressBus& cm = m;
     int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
     int16_t result = 0;
 
@@ -810,7 +810,7 @@ static uint8_t SBC(const Instruction& i, Registers& r, Memory& m)
     return extra_cycles_used;
 }
 
-static uint8_t SEC(const Instruction& i, Registers& r, Memory& m)
+static uint8_t SEC(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 1 -> C
     // N   Z   C   I   D   V
@@ -821,7 +821,7 @@ static uint8_t SEC(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t SED(const Instruction& i, Registers& r, Memory& m)
+static uint8_t SED(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 1 -> D
     // N   Z   C   I   D   V
@@ -832,7 +832,7 @@ static uint8_t SED(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t SEI(const Instruction& i, Registers& r, Memory& m)
+static uint8_t SEI(const Instruction& i, Registers& r, AddressBus& m)
 {
     // 1 -> I
     // N   Z   C   I   D   V
@@ -842,7 +842,7 @@ static uint8_t SEI(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t STA(const Instruction& i, Registers& r, Memory& m)
+static uint8_t STA(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A -> M
     // N    Z   C   I   D   V
@@ -853,7 +853,7 @@ static uint8_t STA(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t STX(const Instruction& i, Registers& r, Memory& m)
+static uint8_t STX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // X -> M
     // N   Z   C   I   D   V
@@ -864,7 +864,7 @@ static uint8_t STX(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t STY(const Instruction& i, Registers& r, Memory& m)
+static uint8_t STY(const Instruction& i, Registers& r, AddressBus& m)
 {
     // X -> M
     // N   Z   C   I   D   V
@@ -875,7 +875,7 @@ static uint8_t STY(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t TAX(const Instruction& i, Registers& r, Memory& m)
+static uint8_t TAX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A -> X
     // N   Z   C   I   D   V
@@ -888,7 +888,7 @@ static uint8_t TAX(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t TAY(const Instruction& i, Registers& r, Memory& m)
+static uint8_t TAY(const Instruction& i, Registers& r, AddressBus& m)
 {
     // A -> Y
     // N   Z   C   I   D   V
@@ -901,7 +901,7 @@ static uint8_t TAY(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t TXA(const Instruction& i, Registers& r, Memory& m)
+static uint8_t TXA(const Instruction& i, Registers& r, AddressBus& m)
 {
     // X -> A
     // N   Z   C   I   D   V
@@ -914,7 +914,7 @@ static uint8_t TXA(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t TSX(const Instruction& i, Registers& r, Memory& m)
+static uint8_t TSX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // N   Z   C   I   D   V
     // +   +   -   -   -   -
@@ -925,13 +925,13 @@ static uint8_t TSX(const Instruction& i, Registers& r, Memory& m)
     return 0;
 }
 
-static uint8_t TXS(const Instruction& i, Registers& r, Memory& m)
+static uint8_t TXS(const Instruction& i, Registers& r, AddressBus& m)
 {
     r.SP = r.X;
     return 0;
 }
 
-static uint8_t TYA(const Instruction& i, Registers& r, Memory& m)
+static uint8_t TYA(const Instruction& i, Registers& r, AddressBus& m)
 {
     // Y -> A
     // N   Z   C   I   D   V

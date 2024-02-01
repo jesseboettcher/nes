@@ -129,7 +129,7 @@ struct Instruction
 // and system memory. Returns the number of extra cycles that were used to execute the instruction.
 // That is cycles beyond the ones described in the InstructionDetails. Extra cycles are sometimes
 // needed for things like crossing page boundaries.
-using InstructionHandler = std::function<uint8_t(const Instruction& i, Registers& r, Memory& m)>;
+using InstructionHandler = std::function<uint8_t(const Instruction& i, Registers& r, AddressBus& m)>;
 
 struct InstructionDetails
 {
@@ -184,7 +184,7 @@ public:
 	void print_watchpoints();
 	void print_history(const uint16_t num_instructions);
 
-	const Memory& cmemory() { return memory_; }
+	const AddressBus& cmemory() { return memory_; }
 	const Registers& cregisters() { return registers_; }
 	uint64_t instruction_count() { return instr_count_; }
 	uint64_t cycle_count() { return cycle_count_; }
@@ -197,7 +197,7 @@ protected:
 	friend class Joypads;
 	friend class NesPPU;
 	friend class Test6502;
-	Memory& memory() { return memory_; }
+	AddressBus& memory() { return memory_; }
 	Registers& registers() { return registers_; }
 
 	void set_non_maskable_interrupt() { non_maskable_interrupt_ = true; }
@@ -222,7 +222,7 @@ private:
 
 	int32_t cycles_to_wait_{0};
 
-	Memory memory_{};
+	AddressBus memory_{};
 	Registers registers_{};
 	bool non_maskable_interrupt_{false};
 

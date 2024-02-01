@@ -97,7 +97,7 @@ void MenuHandler::goto_memory()
     int32_t line_number = address / 8; /* number of bytes shown per line */
 
     static const double ALIGNMENT_OFFSET = 0.00001; // needed to avoid a partial line shown
-    double scroll_position = line_number / (Memory::ADDRESSABLE_MEMORY_SIZE / 8.0) + ALIGNMENT_OFFSET;
+    double scroll_position = line_number / (AddressBus::ADDRESSABLE_MEMORY_SIZE / 8.0) + ALIGNMENT_OFFSET;
 
     QMetaObject::invokeMethod(scroll_view_, "set_scroll_position", Q_ARG(QVariant, scroll_position));
 }

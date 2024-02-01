@@ -9,7 +9,7 @@
 Joypads::Joypads(Processor6502& processor)
  : processor_(processor)
 {
-    Memory &m = processor_.memory();
+    AddressBus &m = processor_.memory();
     m.add_peripheral_connection(JOYPAD1, std::bind(&Joypads::read_joypad_1_callback, this));
     m.add_peripheral_connection(JOYPAD2, std::bind(&Joypads::read_joypad_2_callback, this));
 }
@@ -19,7 +19,7 @@ void Joypads::step()
     // memory view bypasses the peripheral connection, so we can see
     // what the program has written to memory instead of getting what
     // is provided by this peripheral
-    const Memory::View memory = processor_.memory().view(JOYPAD1, 2);
+    const AddressBus::View memory = processor_.memory().view(JOYPAD1, 2);
 
     bool strobe_last = strobe_bit_;
     strobe_bit_ = memory[JOYPAD1] & 0x01;

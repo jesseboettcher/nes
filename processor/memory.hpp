@@ -7,7 +7,7 @@
 
 #include <glog/logging.h>
 
-class Memory
+class AddressBus
 {
 public:
     enum class AccessType
@@ -36,7 +36,7 @@ public:
         int32_t size() const { return size_; }
 
     protected:
-        friend class Memory;
+        friend class AddressBus;
 
         View(int32_t address, int32_t size, const AddressableMemory& memory)
          : address_(address)
@@ -56,9 +56,38 @@ public:
     };
 
 
-    Memory()
+    AddressBus()
     {
         memory_.fill(0);
+    }
+
+    const uint8_t read(int32_t a)
+    {
+        assert(a >= 0 && a < ADDRESSABLE_MEMORY_SIZE);
+
+        if (a < 0x2000) // CPU memory
+        {
+            return memory_[a % 0x0800]; // mirrored after 0x07FF up to 0x1FFF
+        }
+        else if (a <= 0x3FFF) // PPU registers, mirrored after 0x2000 - 0x2007
+        {
+            // ppu register
+            return 0;
+        }
+        else if (a <= 0x4017) // APU, IO registers
+        {
+            return 0;
+        }
+        else if (a <= 0x401F) // disabled APU, IO functions
+        {
+            assert(false);
+            return 0;
+        }
+        else
+        {
+            // cartridge
+            return 0;
+        }
     }
 
     const uint8_t operator [] (int32_t i) const
