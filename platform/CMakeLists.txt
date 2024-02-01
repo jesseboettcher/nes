@@ -28,7 +28,7 @@ qt_add_qml_module(appnes_qt
     QML_FILES main.qml registers.qml memory.qml sprites.qml
     SOURCES ../config/flags.hpp
     SOURCES ../processor/instructions.cpp ../processor/instructions.hpp ../processor/memory.hpp ../processor/nes_ppu.cpp ../processor/nes_ppu.hpp ../processor/processor_6502.cpp ../processor/processor_6502.hpp ../processor/utils.cpp ../processor/utils.hpp ../processor/video_memory.hpp
-    SOURCES ../io/linux_display.cpp ../io/joypads.cpp ../io/cartridge_interface.cpp ../io/cartridge_interface.hpp ../io/display.hpp ../io/files.cpp ../io/files.hpp  ../io/prompt.cpp ../io/prompt.hpp
+    SOURCES ../io/linux_display.cpp ../io/joypads.cpp ../io/cartridge.cpp ../io/cartridge.hpp ../io/display.hpp ../io/files.cpp ../io/files.hpp  ../io/prompt.cpp ../io/prompt.hpp
     SOURCES ../system/nes.cpp ../system/nes.hpp
 )
 

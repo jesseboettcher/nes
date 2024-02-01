@@ -8,7 +8,7 @@
 
 #include <glog/logging.h>
 
-Nes::Nes(std::unique_ptr<NesFileParser> cartridge)
+Nes::Nes(std::unique_ptr<Cartridge> cartridge)
 : cartridge_(nullptr)
 , processor_()
 , display_()
@@ -28,7 +28,7 @@ Nes::~Nes()
 
 }
 
-bool Nes::load_cartridge(std::unique_ptr<NesFileParser> cartridge)
+bool Nes::load_cartridge(std::unique_ptr<Cartridge> cartridge)
 {
     bool success = true;
 

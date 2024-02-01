@@ -1,6 +1,6 @@
 #pragma once
 
-#include "io/cartridge_interface.hpp"
+#include "io/cartridge.hpp"
 #include "io/display.hpp"
 #include "io/files.hpp"
 #include "io/joypads.hpp"
@@ -20,10 +20,10 @@ public:
         RUNNING,
     };
     
-    Nes(std::unique_ptr<NesFileParser> cartridge = nullptr);
+    Nes(std::unique_ptr<Cartridge> cartridge = nullptr);
 	virtual ~Nes();
 
-    bool load_cartridge(std::unique_ptr<NesFileParser> cartridge);
+    bool load_cartridge(std::unique_ptr<Cartridge> cartridge);
     
 	// Run and execute instructions from memory
 	void run();
@@ -52,7 +52,7 @@ private:
 
     void update_state(State state);
     
-    std::unique_ptr<NesFileParser> cartridge_;
+    std::unique_ptr<Cartridge> cartridge_;
 
 	// clocks:
 	// master: 21.477272Mhz

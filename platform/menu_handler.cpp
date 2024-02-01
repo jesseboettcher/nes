@@ -1,6 +1,6 @@
 #include "platform/menu_handler.hpp"
 
-#include "io/cartridge_interface.hpp"
+#include "io/cartridge.hpp"
 #include "io/prompt.hpp"
 #include "platform/ui_context.hpp"
 
@@ -19,9 +19,9 @@ MenuHandler::MenuHandler()
 
 void MenuHandler::start_nes(std::filesystem::path path)
 {
-    std::unique_ptr<NesFileParser> cartridge;
+    std::unique_ptr<Cartridge> cartridge;
 
-    cartridge = std::make_unique<NesFileParser>(path);
+    cartridge = std::make_unique<Cartridge>(path);
 
     if (!UIContext::instance().nes->load_cartridge(std::move(cartridge)))
     {
