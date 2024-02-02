@@ -2,7 +2,7 @@
 
 #include "lib/magic_enum.hpp"
 #include "io/joypads.hpp"
-#include "processor/memory.hpp"
+#include "processor/address_bus.hpp"
 #include "processor/nes_ppu.hpp"
 
 #include <optional>

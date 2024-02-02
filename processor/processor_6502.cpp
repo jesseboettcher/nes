@@ -625,3 +625,13 @@ Instruction Processor6502::assemble_instruction(std::string inst_string)
 	LOG(FATAL) << "Instruction not found";
 	return Instruction();
 }
+
+uint8_t Processor6502::read(uint16_t a) const
+{
+	return internal_memory_[a];
+}
+
+uint8_t& Processor6502::write(uint16_t a)
+{
+	return internal_memory_[a];
+}

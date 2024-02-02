@@ -4,7 +4,7 @@
 #pragma once
 
 #include "processor/instructions.hpp"
-#include "processor/memory.hpp"
+#include "processor/address_bus.hpp"
 
 #include <array>
 #include <cassert>
@@ -144,6 +144,8 @@ struct InstructionDetails
 class Processor6502
 {
 public:
+	using CPUMemory = std::array<uint8_t, 2 * 1024>; // 2kb ram
+
 	Processor6502();
 	~Processor6502();
 
@@ -201,6 +203,11 @@ protected:
 	AddressBus& memory() { return memory_; }
 	Registers& registers() { return registers_; }
 
+	// internal memory accessors
+	friend class AddressBus;
+	uint8_t read(uint16_t a) const;
+	uint8_t& write(uint16_t a);
+
 	void set_non_maskable_interrupt() { non_maskable_interrupt_ = true; }
 
 private:
@@ -223,6 +230,7 @@ private:
 
 	int32_t cycles_to_wait_{0};
 
+    CPUMemory internal_memory_;
 	AddressBus memory_{};
 	Registers registers_{};
 	bool non_maskable_interrupt_{false};

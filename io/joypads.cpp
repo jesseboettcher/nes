@@ -2,7 +2,7 @@
 
 #include "lib/magic_enum.hpp"
 #include "platform/ui_properties.hpp"
-#include "processor/memory.hpp"
+#include "processor/address_bus.hpp"
 
 #include <glog/logging.h>
 

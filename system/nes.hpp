@@ -44,7 +44,7 @@ public:
     
 protected:
 	friend class CommandPrompt;
-	Processor6502& processor() { return processor_; }
+	Processor6502& processor() { return *processor_; }
 	NesPPU& ppu() { return *ppu_; }
 
 private:
@@ -60,7 +60,7 @@ private:
 	// cpu: master / 12
 	uint64_t clock_ticks_{0};
 
-	Processor6502 processor_;
+	std::shared_ptr<Processor6502> processor_;
 	NesDisplay display_;
 	std::shared_ptr<NesPPU> ppu_;
 	std::shared_ptr<Joypads> joypads_;
