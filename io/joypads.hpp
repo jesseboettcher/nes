@@ -1,7 +1,6 @@
 #pragma once
 
 #include <queue>
-#include <unordered_map>
 
 class Joypads
 {
@@ -32,12 +31,18 @@ public:
 private:
     uint8_t read(std::queue<bool>& snapshot) const;
 
+    inline uint8_t& data(uint16_t addr)
+    {
+        return addr == JOYPAD1 ? joypad_1_data_ : joypad_2_data_;
+    }
+
     uint8_t read_joypad_1_callback() const;
     uint8_t read_joypad_2_callback() const;
 
     bool strobe_bit_{false};
 
-    std::unordered_map<uint16_t, uint8_t> values_;
+    uint8_t joypad_1_data_;
+    uint8_t joypad_2_data_;
 
     mutable std::queue<bool> joypad_1_snapshot_;
     mutable std::queue<bool> joypad_2_snapshot_;

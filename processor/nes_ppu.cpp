@@ -22,11 +22,8 @@ NesPPU::NesPPU(Processor6502& processor, NesDisplay& display)
     registers_[PPUDATA] = 0x00;
     registers_[OAMDMA] = 0x00;
 
-    processor_.memory().add_write_notifier(OAMADDR, std::bind(&NesPPU::set_oamaddr_written, this));
-    processor_.memory().add_write_notifier(OAMDATA, std::bind(&NesPPU::set_oamdata_written, this));
-    processor_.memory().add_write_notifier(PPUADDR, std::bind(&NesPPU::set_ppuaddr_written, this));
-    processor_.memory().add_write_notifier(PPUDATA, std::bind(&NesPPU::set_ppudata_written, this));
-    processor_.memory().add_write_notifier(OAMDMA, std::bind(&NesPPU::set_oamdma_written, this));
+    cached_nametable_address_ = nametable_base_address();
+    cached_patterntable_address = pattern_table_base_address();
 }
 
 NesPPU::~NesPPU()
@@ -70,10 +67,13 @@ bool NesPPU::step()
     {
         registers_[PPUSTATUS] |= PPUSTATUS_vblank;
 
-        if (processor_.cmemory()[PPUCTRL] & PPUCTRL_Generate_NMI)
+        if (registers_[PPUCTRL] & PPUCTRL_Generate_NMI)
         {
             processor_.set_non_maskable_interrupt();
             display_.clear_screen(fetch_color_from_palette(0, 0)); // background color
+
+            cached_nametable_address_ = nametable_base_address();
+            cached_patterntable_address = pattern_table_base_address();
 
             read_sprite_oam(); // TODO proper timing for reading oam
             render_sprites(Sprite::Layer::Background); // TODO integrate with proper timing and background rendering
@@ -85,32 +85,21 @@ bool NesPPU::step()
         registers_[PPUSTATUS] &= ~PPUSTATUS_vblank;
     }
 
-    oamaddr_written_ = false;
-    oamdata_written_ = false;
-    ppuaddr_written_ = false;
-    ppudata_written_ = false;
-    oamdma_written_ = false;
-
     return true;
 }
 
 uint8_t NesPPU::read(uint16_t a) const
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
-    if (a == NesPPU::OAMDMA)
-    {
-        return registers_.at(a);
-    }
-    return registers_.at(a);
+
+    return registers_[a];
 }
 
 uint8_t& NesPPU::write(uint16_t a)
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
-    if (a == OAMDMA)
-    {
-        return registers_[a];
-    }
+
+    registers_.set_had_write(a);
     return registers_[a];
 }
 
@@ -124,7 +113,7 @@ void NesPPU::render_pixel()
     const uint8_t pattern_tile_index = get_pattern_tile_index_for_pixel(pixel_x, pixel_y);
 
     // Get the index into the color table from the pattern table tile
-    const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(pattern_table_base_address(),
+    const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(cached_patterntable_address,
                                                                              pixel_x % 8,
                                                                              pixel_y % NAMETABLE_TILE_SIZE,
                                                                              pattern_tile_index);
@@ -150,7 +139,7 @@ uint8_t NesPPU::get_pattern_tile_index_for_pixel(uint8_t pixel_x, uint8_t pixel_
     // which contain an index into the pattern table.
     const uint8_t tile_y = pixel_y / NAMETABLE_TILE_SIZE;
     const uint8_t tile_x = pixel_x / NAMETABLE_TILE_SIZE;
-    const uint16_t nt_addr = nametable_base_address() + tile_x + tile_y * NAMETABLE_WIDTH;
+    const uint16_t nt_addr = cached_nametable_address_ + tile_x + tile_y * NAMETABLE_WIDTH;
     
     return memory_[nt_addr];;
 }
@@ -195,7 +184,7 @@ uint8_t NesPPU::get_palette_index_for_pixel(uint8_t pixel_x, uint8_t pixel_y)
     static constexpr uint16_t ATTRIBUTETABLE_WIDTH = 8; // bytes
     const uint8_t attributetable_x = pixel_x / ATTRIBUTETABLE_TILE_SIZE;
     const uint8_t attributetable_y = pixel_y / ATTRIBUTETABLE_TILE_SIZE;
-    const uint16_t attribute_addr = nametable_base_address() + NAMETABLE_WIDTH * NAMETABLE_HEIGHT +
+    const uint16_t attribute_addr = cached_nametable_address_ + NAMETABLE_WIDTH * NAMETABLE_HEIGHT +
                                     attributetable_x + attributetable_y * ATTRIBUTETABLE_WIDTH;
     const uint8_t tile_y = pixel_y / NAMETABLE_TILE_SIZE;
     const uint8_t tile_x = pixel_x / NAMETABLE_TILE_SIZE;
@@ -358,10 +347,11 @@ NesPPU::Sprite NesPPU::sprite(uint16_t index) const
 
 void NesPPU::handle_oam_data_register()
 {
-    if (oamaddr_written_)
+    if (registers_.had_write(OAMADDR))
     {
+        registers_.clear_write_flag(OAMADDR);
         {
-            oam_data_addr_ = processor_.cmemory()[OAMADDR];
+            oam_data_addr_ = registers_[OAMADDR];
             // LOG(INFO) << "write OAMADDR " << std::hex << "0x" << oam_data_addr_;
             // assert(false);
         }
@@ -383,8 +373,9 @@ void NesPPU::handle_oam_data_register()
         // }
     }
 
-    if (oamdata_written_)
+    if (registers_.had_write(OAMDATA))
     {
+        registers_.clear_write_flag(OAMDATA);
         // If the processor wrote to the PPUDATA register, write that data to the address pointed to
         // by ppu_data_addr in video memory. Then increment the address by the amount specified by
         // the control register (either horizontal or down).
@@ -401,8 +392,9 @@ void NesPPU::handle_oam_data_register()
 
 void NesPPU::handle_ppu_data_register()
 {
-    if (ppuaddr_written_)
+    if (registers_.had_write(PPUADDR))
     {
+        registers_.clear_write_flag(PPUADDR);
         if (ppu_addr_write_count % 2 == 0)
         {
             ppu_data_addr_ = 0x0;
@@ -418,8 +410,9 @@ void NesPPU::handle_ppu_data_register()
         ppu_addr_write_count++;
     }
 
-    if (ppudata_written_)
+    if (registers_.had_write(PPUDATA))
     {
+        registers_.clear_write_flag(PPUDATA);
         // If the processor wrote to the PPUDATA register, write that data to the address pointed to
         // by ppu_data_addr in video memory. Then increment the address by the amount specified by
         // the control register (either horizontal or down).
@@ -443,8 +436,10 @@ uint8_t NesPPU::read_ppu_data()
 
 void NesPPU::handle_oam_dma_register()
 {
-    if (oamdma_written_)
+    if (registers_.had_write(OAMDMA))
     {
+        registers_.clear_write_flag(OAMDMA);
+
         uint16_t oam_src_addr = registers_[OAMDMA] << 8;
         for (uint16_t i = 0;i < oam_memory_.size();i++)
         {

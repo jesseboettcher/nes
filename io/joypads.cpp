@@ -10,8 +10,8 @@ static constexpr bool JOYPAD_DEBUG = false;
 
 Joypads::Joypads()
 {
-    values_[JOYPAD1] = 0x00;
-    values_[JOYPAD2] = 0x00;
+    data(JOYPAD1) = 0x00;
+    data(JOYPAD2) = 0x00;
 }
 
 void Joypads::step()
@@ -19,7 +19,7 @@ void Joypads::step()
     // memory view bypasses the peripheral connection, so we can see
     // what the program has written to memory instead of getting what
     // is provided by this peripheral
-    strobe_bit_ = values_[JOYPAD1];
+    strobe_bit_ = data(JOYPAD1);
 
     if (strobe_bit_)
     {
@@ -76,7 +76,7 @@ uint8_t& Joypads::write(uint16_t a)
 {
     assert(a == JOYPAD1 || a == JOYPAD2);
 
-    return values_[a];
+    return data(a);
 }
 
 uint8_t Joypads::read(std::queue<bool>& snapshot) const

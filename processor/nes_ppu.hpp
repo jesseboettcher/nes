@@ -47,6 +47,44 @@ public:
 
     using OAMMemory = std::array<uint8_t, 256>;
 
+
+    class Registers
+    {
+        // Fast lookup for registers with [] notation. Relies on the PPU register addresses
+        // being contiguous from 0x2000 through 0x2007, special case for OAMDMA which is at
+        // 0x4014 and actually supposed to be handled by the main CPU.
+
+    public:
+        static constexpr int32_t REGISTER_COUNT = 9;
+
+        Registers() : values_(REGISTER_COUNT, 0x00), had_write_flags_(REGISTER_COUNT, false) {}
+
+        // Operator[] for assignment
+        uint8_t& operator[](uint16_t reg)
+        {
+            return values_[to_index(reg)];
+        }
+
+        uint8_t operator[](uint16_t reg) const { return values_[to_index(reg)]; }
+
+        bool had_write(uint16_t reg) { return had_write_flags_[to_index(reg)]; }
+        void set_had_write(uint16_t reg) { had_write_flags_[to_index(reg)] = true; }
+
+        void clear_write_flag(int16_t reg)
+        {
+             had_write_flags_[to_index(reg)] = false;
+        }
+
+    private:
+        inline uint16_t to_index(uint16_t reg) const
+        {
+            return reg > 0x2007 ? REGISTER_COUNT - 1 : reg - 0x2000;
+        }
+
+        std::vector<uint8_t> values_;
+        std::vector<bool> had_write_flags_;
+    };
+
     enum class SpriteType
     {
         Sprite_8x8,
@@ -163,13 +201,6 @@ private:
 
     // amount to increment PPUADDR after a write to PPUDATA
     uint16_t ppu_addr_increment_amount();
-
-    // notifiers for memory accesses from main cpu
-    void set_oamaddr_written() { oamaddr_written_ = true; }
-    void set_oamdata_written() { oamdata_written_ = true; }
-    void set_ppuaddr_written() { ppuaddr_written_ = true; }
-    void set_ppudata_written() { ppudata_written_ = true; }
-    void set_oamdma_written()  { oamdma_written_ = true;  }
     
     bool oamaddr_written_{false};
     bool oamdata_written_{false};
@@ -182,9 +213,12 @@ private:
     PPUAddressBus memory_;
     OAMMemory oam_memory_;
 
-    std::unordered_map<uint16_t, uint8_t> registers_;
+    Registers registers_;
 
     std::vector<Sprite> sprites_;
+
+    uint16_t cached_nametable_address_{0};
+    uint16_t cached_patterntable_address{0};
 
     // scanline_
     // 0-239 rendering

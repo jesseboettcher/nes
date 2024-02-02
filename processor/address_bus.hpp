@@ -73,15 +73,11 @@ public:
 
     const uint8_t operator [] (int32_t i) const
     {
-        check_notifiers(read_notifiers_, i);
-
         return read(i);
     }
 
     uint8_t& operator [] (int32_t i)
     {
-        check_notifiers(write_notifiers_, i);
-
         return write(i);
     }
 
@@ -114,18 +110,6 @@ public:
         return (*this)[0x0100 + sp];
     }
 
-    bool add_read_notifier(uint16_t address, AccessNotifier notifier)
-    {
-        read_notifiers_.push_back({address, notifier});
-        return true;
-    }
-
-    bool add_write_notifier(uint16_t address, AccessNotifier notifier)
-    {
-        write_notifiers_.push_back({address, notifier});
-        return true;
-    }
-
     void attach_cpu(std::shared_ptr<Processor6502> cpu) { cpu_ = cpu; }
     void attach_cartridge(std::shared_ptr<Cartridge> cartridge) { cartridge_ = cartridge; }
     void attach_joypads(std::shared_ptr<Joypads> joypads) { joypads_ = joypads; }
@@ -142,9 +126,6 @@ private:
             }
         }
     }
-
-    std::vector<std::pair<uint16_t, AccessNotifier>> read_notifiers_;
-    std::vector<std::pair<uint16_t, AccessNotifier>> write_notifiers_;
 
     std::shared_ptr<Processor6502> cpu_;
     std::shared_ptr<Cartridge> cartridge_;
