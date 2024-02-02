@@ -6,7 +6,7 @@
 
 #include <glog/logging.h>
 
-static constexpr bool JOYPAD_DEBUG = true;
+static constexpr bool JOYPAD_DEBUG = false;
 
 Joypads::Joypads()
 {
