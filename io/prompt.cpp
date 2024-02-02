@@ -62,24 +62,16 @@ void CommandPrompt::launch_prompt(Nes& nes)
     while (should_continue)
     {
         std::string cmd;
-        std::cout << " > ";
 
-        if constexpr (DISPLAY_TYPE == DISPLAY_HEADLESS)
-        {
-            cmd = read_input();
-        }
-        else
-        {
-            command_sema_.acquire();
+        command_sema_.acquire();
 
-            std::lock_guard<std::mutex> guard(mutex_);
-            if (do_shutdown_)
-            {
-                break;
-            }
-            cmd = queued_commands_.front();
-            queued_commands_.pop();
+        std::lock_guard<std::mutex> guard(mutex_);
+        if (do_shutdown_)
+        {
+            break;
         }
+        cmd = queued_commands_.front();
+        queued_commands_.pop();
         
         should_continue = execute_command(nes, cmd);
     }

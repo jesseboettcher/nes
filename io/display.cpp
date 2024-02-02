@@ -1,11 +1,15 @@
 #include "io/display.hpp"
 
+#include "system/callbacks.hpp"
+
 #include <glog/logging.h>
 
-// XSetForeground(display_, gc_, color);
-// XDrawPoint(display_, window_, gc_, 5, 5);
-// XDrawLine(display_, window_, gc_, 511, 0, 511, 200);
-// XFillRectangle(display_, window_, gc_, 0, 0, WIDTH * SCALE, HEIGHT * SCALE);
+NesDisplay * global_display_ptr = nullptr;
+
+void NesDisplay::init()
+{
+    global_display_ptr = this;
+}
 
 void NesDisplay::clear_screen(Color color)
 {
@@ -20,61 +24,51 @@ void NesDisplay::clear_screen(Color color)
 
 void NesDisplay::draw_pixel(int32_t x, int32_t y, Color color)
 {
-    offscreen_[x][y] = color;
+    assert(x >= 0 && y >= 0);
+    if (x > WIDTH || y > HEIGHT)
+    {
+        return;
+    }
+    offscreen_[draw_buffer_index()][y][x] = color;
 }
 
 void NesDisplay::render()
 {
-    for (uint32_t x = 0; x < WIDTH; ++x)
-    {
-        for (uint32_t y = 0; y < HEIGHT; ++y)
-        {
-            XSetForeground(display_, gc_, offscreen_[x][y]);
+    ready_for_display_ = true;
+    swap_buffers();
 
-            int32_t adj_x = x * SCALE;
-            int32_t adj_y = y * SCALE;
-
-            XDrawPoint(display_, window_, gc_, adj_x + 0, adj_y + 0);
-            XDrawPoint(display_, window_, gc_, adj_x + 1, adj_y + 0);
-            XDrawPoint(display_, window_, gc_, adj_x + 0, adj_y + 1);
-            XDrawPoint(display_, window_, gc_, adj_x + 1, adj_y + 1);
-        }
-    }
-    XFlush(display_);
-    XSync(display_, False);
+    refresh_callback_();
 }
 
-void NesDisplay::init()
+NesDisplayView::NesDisplayView(QQuickItem *parent)
 {
-    display_ = XOpenDisplay(nullptr);
+    // bind the nes display refresh callback to the QT signal in ViewUpdateRelay which makes sure
+    // the handler is called on the main event thread
+    connect_nes_refresh_callback(std::bind(&ViewUpdateRelay::requestUpdate, &refresh_relay_));
 
-    window_ = XCreateWindow(display_, DefaultRootWindow(display_), 0, 0, 
-                            WIDTH * SCALE, HEIGHT * SCALE, 0, 
-                            CopyFromParent, CopyFromParent, CopyFromParent,
-                            0, 0);
+    // connect the QT signal ViewUpdateRelay to call the NesDisplayView::refresh which will
+    // call the view update() to trigger a re-paint
+    connect(&refresh_relay_, &ViewUpdateRelay::requestUpdate, this, &NesDisplayView::refresh,
+            Qt::QueuedConnection);
+}
 
-    XMapWindow(display_, window_);
 
-    XGCValues values;    /* initial values for the GC.   */
-    gc_ = XCreateGC(display_, window_, 0, &values);
-    XSync(display_, False);
+void NesDisplayView::refresh()
+{
+    update(boundingRect().toAlignedRect());
+}
 
-    // Wait for an event before drawing or nothing will show up
-    XSelectInput(display_, window_, ExposureMask);
-    XEvent ev;
-    XNextEvent(display_, &ev);
+void NesDisplayView::paint(QPainter *painter)
+{
+    // TODO get instance of NesDisplay and retrieve buffer from it
+    // TODO time this and look at more efficient options
 
-    for (int32_t i = 0; i < WIDTH * HEIGHT; ++i)
-    {
-        draw_pixel(i % WIDTH, i / WIDTH, rgb(0xFF, 0, 0));
-    }
+    QImage image((const uchar*)global_display_ptr->display_buffer(), NesDisplay::WIDTH, NesDisplay::HEIGHT,
+                 QImage::Format_RGBA8888);
 
-    render();
-
-    XSetForeground(display_, gc_, rgb(0xFF, 0xFF, 0xFF));
-    XDrawString(display_, window_, gc_, 10, 10, "Hello! Nice to meet you!",
-                strlen("Hello! Nice to meet you!"));
-
-    XFlush(display_);
-    XSync(display_, False);
+    QPixmap pixmap;
+    pixmap.convertFromImage(image);
+    painter->drawPixmap(0, 0, NesDisplay::WIDTH * 2, NesDisplay::HEIGHT * 2, // dest rect
+                        pixmap,
+                        0, 0,NesDisplay::WIDTH, NesDisplay::HEIGHT); // source rect
 }

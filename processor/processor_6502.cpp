@@ -1,5 +1,6 @@
 #include "processor_6502.hpp"
 
+#include "config/flags.hpp"
 #include "processor/utils.hpp"
 #include "platform/ui_properties.hpp"
 
