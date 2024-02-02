@@ -207,7 +207,7 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
         }
         else if (std::regex_match(sub_cmd, detail_match, std::regex("n|nametable")))
         {
-            VideoMemory::NametableView nv =
+            PPUAddressBus::NametableView nv =
                 nes.ppu().cmemory().nametable_view(nes.ppu().nametable_base_address());
 
             std::cout << nv;
@@ -268,7 +268,7 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
                                                    (patterntable_x << 4) |
                                                    (patterntable_y << 8);
 
-                VideoMemory::View v = 
+                PPUAddressBus::View v = 
                     nes.ppu().cmemory().view(pattern_tile_addr, 16);
 
                 std::cout << "tile lo bits\n";
@@ -292,7 +292,7 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
                                                    (patterntable_y << 8) |
                                                    patterntable_hi_bit_plane_select;
 
-                VideoMemory::View v = 
+                PPUAddressBus::View v = 
                     nes.ppu().cmemory().view(pattern_tile_addr, 16);
 
                 std::cout << "tile hi bits\n";
@@ -384,7 +384,7 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
         else if (std::regex_match(sub_cmd, detail_match, std::regex("attr")))
         {
             uint16_t attr_addr = nes.ppu().nametable_base_address() + 32 * 30;
-            VideoMemory::View v =
+            PPUAddressBus::View v =
                 nes.ppu().cmemory().view(attr_addr, 64);
 
 

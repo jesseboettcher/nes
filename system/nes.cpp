@@ -8,16 +8,20 @@
 
 #include <glog/logging.h>
 
-Nes::Nes(std::unique_ptr<Cartridge> cartridge)
+Nes::Nes(std::shared_ptr<Cartridge> cartridge)
 : cartridge_(nullptr)
 , processor_()
 , display_()
-, ppu_(processor_, display_)
-, joypads_(processor_)
 {
     std::cout << "Launching Nes...\n";
 
-    load_cartridge(std::move(cartridge));
+    joypads_ = std::make_shared<Joypads>();
+    ppu_ = std::make_shared<NesPPU>(processor_, display_);
+
+    processor_.memory().attach_joypads(joypads_);
+    processor_.memory().attach_ppu(ppu_);
+
+    load_cartridge(cartridge);
     display_.init();
 
     update_state(State::OFF);
@@ -28,22 +32,24 @@ Nes::~Nes()
 
 }
 
-bool Nes::load_cartridge(std::unique_ptr<Cartridge> cartridge)
+bool Nes::load_cartridge(std::shared_ptr<Cartridge> cartridge)
 {
     bool success = true;
 
     user_interrupt();
 
-    ppu_.reset();
-
-    cartridge_ = std::move(cartridge);
-    if (cartridge_)
+    cartridge_ = cartridge;
+    if (cartridge_ && cartridge_->valid())
     {
-        success = CartridgeInterface::load(processor_, ppu_, *cartridge_);
+        processor_.memory().attach_cartridge(cartridge_);
+        ppu_->memory().attach_cartridge(cartridge_);
+
+        cartridge_->reset();
+        processor_.reset();
+        ppu_->reset();
+
+        update_state(State::IDLE);
     }
-    processor_.reset();
-    
-    update_state(State::IDLE);
 
     return success;
 }
@@ -84,11 +90,11 @@ bool Nes::step()
 
     clock_ticks_ += 4;
 
-    ppu_.step();
+    ppu_->step();
 
     if (clock_ticks_ % 12 == 0)
     {
-        joypads_.step();
+        joypads_->step();
         should_continue = processor_.step();
     }
 

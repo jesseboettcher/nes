@@ -1,13 +1,24 @@
 #pragma once
 
 #include "io/files.hpp"
-#include "processor/processor_6502.hpp"
-#include "processor/nes_ppu.hpp"
 
 class Cartridge
 {
     // Parser for the .nes file format type: https://www.nesdev.org/wiki/INES
 public:
+    Cartridge(std::filesystem::path path);
+    Cartridge(std::span<uint8_t> buffer);
+
+    bool valid() const;
+
+    uint8_t read(uint16_t a) const;
+    uint8_t ppu_read(uint16_t a) const;
+
+    void reset();
+
+    friend std::ostream& operator << (std::ostream& os, const Cartridge &f);
+
+private:
     enum class Format
     {
         Unknown,
@@ -15,13 +26,8 @@ public:
         iNES2
     };
 
-    Cartridge(std::filesystem::path path);
-    Cartridge(std::span<uint8_t> buffer);
-
     // Returns true if successful
     bool parse();
-
-    bool valid() const;
 
     Format format() const { return format_; }
 
@@ -33,12 +39,12 @@ public:
     std::span<uint8_t> prg_rom() const;
     std::optional<std::span<uint8_t>> chr_rom() const;
 
-    friend std::ostream& operator << (std::ostream& os, const Cartridge &f);
-
-private:
     bool has_trainer() const;
     bool has_battery() const { return buffer_[6] & 0x02; }
     bool horizontal_nametable_mirroring() const { return buffer_[6] & 0x01; }
+
+    std::span<uint8_t> cpu_mapping_; // data mapped to 0x8000 - 0xBFFF
+    std::span<uint8_t> ppu_mapping_; // data mapped to 0x0000 - 0x1FFF
 
     std::span<uint8_t> buffer_;
     std::shared_ptr<MappedFile> file_;
@@ -46,15 +52,4 @@ private:
     Format format_{Format::Unknown};
 
     std::string name_;
-};
-
-
-class CartridgeInterface
-{
-public:
-    // Copies the PRG ROM to the last 16kb of the processor's memory
-    static bool load(Processor6502& processor, NesPPU& ppu, const Cartridge& parsed_file);
-
-    // Copies the PRG ROM to the last 16kb of the processor's memory
-    static void load(Processor6502& processor, NesPPU& ppu, const MappedFile& generic_rom_file);
 };

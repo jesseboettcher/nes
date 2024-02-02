@@ -197,6 +197,7 @@ protected:
 	friend class Joypads;
 	friend class NesPPU;
 	friend class Test6502;
+	friend class Nes;
 	AddressBus& memory() { return memory_; }
 	Registers& registers() { return registers_; }
 

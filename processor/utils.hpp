@@ -9,7 +9,7 @@ std::ostream& operator << (std::ostream& os, const Instruction& i);
 std::ostream& operator << (std::ostream& os, const AddressBus::View v);
 std::ostream& operator << (std::ostream& os, const AddressBus::StackView v);
 std::ostream& operator << (std::ostream& os, const Registers& r);
-std::ostream& operator << (std::ostream& os, const VideoMemory::NametableView v);
+std::ostream& operator << (std::ostream& os, const PPUAddressBus::NametableView v);
 std::ostream& operator << (std::ostream& os, const NesPPU::Sprite s);
 
 template<class... Args>

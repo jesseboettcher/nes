@@ -11,13 +11,22 @@ NesPPU::NesPPU(Processor6502& processor, NesDisplay& display)
 , display_(display)
 {
     std::cout << "Launching NesPPU...\n";
-    
+
+    registers_[PPUCTRL] = 0x00;
+    registers_[PPUMASK] = 0x00;
+    registers_[PPUSTATUS] = 0x00;
+    registers_[OAMADDR] = 0x00;
+    registers_[OAMDATA] = 0x00;
+    registers_[PPUSCROLL] = 0x00;
+    registers_[PPUADDR] = 0x00;
+    registers_[PPUDATA] = 0x00;
+    registers_[OAMDMA] = 0x00;
+
     processor_.memory().add_write_notifier(OAMADDR, std::bind(&NesPPU::set_oamaddr_written, this));
     processor_.memory().add_write_notifier(OAMDATA, std::bind(&NesPPU::set_oamdata_written, this));
     processor_.memory().add_write_notifier(PPUADDR, std::bind(&NesPPU::set_ppuaddr_written, this));
     processor_.memory().add_write_notifier(PPUDATA, std::bind(&NesPPU::set_ppudata_written, this));
-    processor_.memory().add_write_notifier(OAMDMA, std::bind(&NesPPU::set_omadma_written, this));
-    processor_.memory().add_peripheral_connection(PPUDATA, std::bind(&NesPPU::read_ppu_data, this));
+    processor_.memory().add_write_notifier(OAMDMA, std::bind(&NesPPU::set_oamdma_written, this));
 }
 
 NesPPU::~NesPPU()
@@ -59,7 +68,7 @@ bool NesPPU::step()
 
     if (check_vblank_raising_edge()) // vsync
     {
-        processor_.memory()[PPUSTATUS] |= PPUSTATUS_vblank;
+        registers_[PPUSTATUS] |= PPUSTATUS_vblank;
 
         if (processor_.cmemory()[PPUCTRL] & PPUCTRL_Generate_NMI)
         {
@@ -73,16 +82,36 @@ bool NesPPU::step()
 
     if (check_vblank_falling_edge())
     {
-        processor_.memory()[PPUSTATUS] &= ~PPUSTATUS_vblank;
+        registers_[PPUSTATUS] &= ~PPUSTATUS_vblank;
     }
 
     oamaddr_written_ = false;
     oamdata_written_ = false;
     ppuaddr_written_ = false;
     ppudata_written_ = false;
-    omadma_written_ = false;
+    oamdma_written_ = false;
 
     return true;
+}
+
+uint8_t NesPPU::read(uint16_t a) const
+{
+    assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
+    if (a == NesPPU::OAMDMA)
+    {
+        return registers_.at(a);
+    }
+    return registers_.at(a);
+}
+
+uint8_t& NesPPU::write(uint16_t a)
+{
+    assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
+    if (a == OAMDMA)
+    {
+        return registers_[a];
+    }
+    return registers_[a];
 }
 
 void NesPPU::render_pixel()
@@ -379,12 +408,12 @@ void NesPPU::handle_ppu_data_register()
             ppu_data_addr_ = 0x0;
 
             // first write, high address byte
-            ppu_data_addr_ = processor_.cmemory()[PPUADDR] << 8;
+            ppu_data_addr_ = registers_[PPUADDR] << 8;
         }
         else
         {
             // second write, low address byte
-            ppu_data_addr_ |= processor_.cmemory()[PPUADDR];
+            ppu_data_addr_ |= registers_[PPUADDR];
         }
         ppu_addr_write_count++;
     }
@@ -397,12 +426,7 @@ void NesPPU::handle_ppu_data_register()
         LOG_IF(ERROR, ppu_addr_write_count % 2 != 0) << "Error: "
                 << " write to PPUDATA without a fully set PPUADDR";
 
-        // memory view bypasses the peripheral connection, so we can see
-        // what the program has written to memory instead of getting what
-        // is provided by this peripheral
-        const AddressBus::View processor_mem_view = processor_.memory().view(PPUDATA, 1);
-
-        memory_[ppu_data_addr_] = processor_mem_view[PPUDATA];
+        memory_[ppu_data_addr_] = registers_[PPUDATA];
         ppu_data_addr_ += ppu_addr_increment_amount();
     }
 }
@@ -419,12 +443,12 @@ uint8_t NesPPU::read_ppu_data()
 
 void NesPPU::handle_oam_dma_register()
 {
-    if (omadma_written_)
+    if (oamdma_written_)
     {
-        uint16_t oam_src_addr = processor_.cmemory()[OAMDMA] << 8;
+        uint16_t oam_src_addr = registers_[OAMDMA] << 8;
         for (uint16_t i = 0;i < oam_memory_.size();i++)
         {
-            oam_memory_[i] = processor_.cmemory()[oam_src_addr + i];
+            oam_memory_[i] = processor_.cmemory().read(oam_src_addr + i);
         }
     }
 }
@@ -468,7 +492,7 @@ bool NesPPU::check_rendering_falling_edge() const
 
 uint16_t NesPPU::pattern_table_base_address() const
 {
-    switch (processor_.memory()[PPUCTRL] & PPUCTRL_Backgroundtable_Select)
+    switch (read(PPUCTRL) & PPUCTRL_Backgroundtable_Select)
     {
         case 0:
             return 0x0000;
@@ -482,7 +506,7 @@ uint16_t NesPPU::pattern_table_base_address() const
 
 uint16_t NesPPU::nametable_base_address()
 {
-    switch (processor_.memory()[PPUCTRL] & PPUCTRL_Nametable_Select)
+    switch (read(PPUCTRL) & PPUCTRL_Nametable_Select)
     {
         case 0:
             return 0x2000;
@@ -502,7 +526,7 @@ uint16_t NesPPU::nametable_base_address()
 
 uint16_t NesPPU::sprite_pattern_table_address() const
 {
-    switch(processor_.memory()[PPUCTRL] & PPUCTRL_SpriteTable_Addr)
+    switch(read(PPUCTRL) & PPUCTRL_SpriteTable_Addr)
     {
         case 0:
             return 0x0000;
@@ -516,7 +540,7 @@ uint16_t NesPPU::sprite_pattern_table_address() const
 
 NesPPU::SpriteType NesPPU::sprite_type() const
 {
-    if (processor_.memory()[PPUCTRL] & PPUCTRL_SpriteSize_Select)
+    if (read(PPUCTRL) & PPUCTRL_SpriteSize_Select)
     {
         return SpriteType::Sprite_8x16;
     }
@@ -525,7 +549,7 @@ NesPPU::SpriteType NesPPU::sprite_type() const
 
 uint16_t NesPPU::ppu_addr_increment_amount()
 {
-    switch (processor_.memory()[PPUCTRL] & PPUCTRL_Incrmement_Direction)
+    switch (read(PPUCTRL) & PPUCTRL_Incrmement_Direction)
     {
         case 0:
             return 1; // increment horizontally across the buffer

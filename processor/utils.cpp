@@ -52,7 +52,7 @@ std::ostream& operator << (std::ostream& os, const AddressBus::View v)
 	return os;
 }
 
-std::ostream& operator << (std::ostream& os, const VideoMemory::View v)
+std::ostream& operator << (std::ostream& os, const PPUAddressBus::View v)
 {
 	os << std::hex << std::setfill('0');
 	os << "\n-------------\n";
@@ -139,7 +139,7 @@ std::ostream& operator << (std::ostream& os, const Registers& r)
 	return os;
 }
 
-std::ostream& operator << (std::ostream& os, const VideoMemory::NametableView v)
+std::ostream& operator << (std::ostream& os, const PPUAddressBus::NametableView v)
 {
 	os << std::hex << std::setfill('0');
 	os << "\n-------------\n";

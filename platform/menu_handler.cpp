@@ -19,9 +19,9 @@ MenuHandler::MenuHandler()
 
 void MenuHandler::start_nes(std::filesystem::path path)
 {
-    std::unique_ptr<Cartridge> cartridge;
+    std::shared_ptr<Cartridge> cartridge;
 
-    cartridge = std::make_unique<Cartridge>(path);
+    cartridge = std::make_shared<Cartridge>(path);
 
     if (!UIContext::instance().nes->load_cartridge(std::move(cartridge)))
     {

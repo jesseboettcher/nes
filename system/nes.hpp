@@ -20,10 +20,10 @@ public:
         RUNNING,
     };
     
-    Nes(std::unique_ptr<Cartridge> cartridge = nullptr);
+    Nes(std::shared_ptr<Cartridge> cartridge = nullptr);
 	virtual ~Nes();
 
-    bool load_cartridge(std::unique_ptr<Cartridge> cartridge);
+    bool load_cartridge(std::shared_ptr<Cartridge> cartridge);
     
 	// Run and execute instructions from memory
 	void run();
@@ -45,24 +45,25 @@ public:
 protected:
 	friend class CommandPrompt;
 	Processor6502& processor() { return processor_; }
-	NesPPU& ppu() { return ppu_; }
+	NesPPU& ppu() { return *ppu_; }
 
 private:
     void check_timer();
 
     void update_state(State state);
     
-    std::unique_ptr<Cartridge> cartridge_;
+    std::shared_ptr<Cartridge> cartridge_;
 
 	// clocks:
 	// master: 21.477272Mhz
 	// ppu: master / 4
 	// cpu: master / 12
 	uint64_t clock_ticks_{0};
+
 	Processor6502 processor_;
 	NesDisplay display_;
-	NesPPU ppu_;
-	Joypads joypads_;
+	std::shared_ptr<NesPPU> ppu_;
+	std::shared_ptr<Joypads> joypads_;
 
     std::atomic<State> state_{State::IDLE};
     std::atomic<bool> should_exit_{false};

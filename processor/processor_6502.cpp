@@ -90,7 +90,7 @@ bool Processor6502::step()
 	}
 	else
 	{
-		uint8_t next_instruction = memory_[registers_.PC++];
+        uint8_t next_instruction = memory_.read(registers_.PC++);
 
         if (cycle_count_ == 265329)
         {

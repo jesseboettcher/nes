@@ -4,43 +4,6 @@
 
 #include <glog/logging.h>
 
-bool CartridgeInterface::load(Processor6502& processor, NesPPU& ppu, const Cartridge& parsed_file)
-{
-	if (!parsed_file.valid())
-	{
-		LOG(ERROR) << "Invalid file, skipping load";
-		return false;
-	}
-	if (parsed_file.mapper() != 0)
-	{
-		LOG(ERROR) << "Unsupported cartidge mapper";
-		return false;
-	}
-
-	std::copy(parsed_file.prg_rom().begin(), parsed_file.prg_rom().end(),
-			  processor.memory().begin() + 0x8000);
-
-	if (parsed_file.sizeof_prg_rom() == 0x4000) // 16kb
-	{
-		// cartridges with 16kb of PRG ROM have their data mirrored at 0x8000, roms with 32kb will
-		// full the entire space
-		std::copy(parsed_file.prg_rom().begin(), parsed_file.prg_rom().end(),
-				  processor.memory().begin() + 0x8000 + 0x4000);
-	}
-
-	if (auto maybe_chr_rom = parsed_file.chr_rom())
-	{
-		std::copy(maybe_chr_rom->begin(), maybe_chr_rom->end(), ppu.memory().begin());
-	}
-	return true;
-}
-
-void CartridgeInterface::load(Processor6502& processor, NesPPU&, const MappedFile& generic_rom_file)
-{
-	auto dest_location = processor.memory().end() - generic_rom_file.buffer().size();
-	std::copy(generic_rom_file.buffer().begin(), generic_rom_file.buffer().end(), dest_location);
-}
-
 Cartridge::Cartridge(std::filesystem::path path)
 {
 	file_ = MappedFile::open(path.c_str());
@@ -58,6 +21,46 @@ Cartridge::Cartridge(std::span<uint8_t> buffer)
 : buffer_(buffer)
 {
 	parse();
+}
+
+uint8_t Cartridge::read(uint16_t a) const
+{
+    assert(a >= 0x4020);
+
+    if (a < 0x8000)
+    {
+        // valid cartridge address space, but not used by mapper 0
+        return 0;
+    }
+
+    if (a >= 0xC000 && cpu_mapping_.size() == 0x4000) // 16kb roms (0x4000) are mirrored at 0xC000
+	{
+		return cpu_mapping_[a - 0xC000];
+	}
+
+	return cpu_mapping_[a - 0x8000];
+}
+
+uint8_t Cartridge::ppu_read(uint16_t a) const
+{
+	assert(a <= 0x2000);
+
+	return ppu_mapping_[a];
+}
+
+void Cartridge::reset()
+{
+	if (mapper() == 0)
+	{
+		cpu_mapping_ = prg_rom();
+
+		if (chr_rom())
+		{
+			ppu_mapping_ = chr_rom().value();
+		}
+		return;
+	}
+	assert(false);
 }
 
 bool Cartridge::parse()

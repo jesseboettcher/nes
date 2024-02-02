@@ -94,7 +94,11 @@ public:
     // Step the processor 1 cycle. Returns true if the processor should continue running
     bool step();
 
-    const VideoMemory& cmemory() { return memory_; }
+    // Accessors for the PPU registers from AddressBus
+    uint8_t read(uint16_t a) const;
+    uint8_t& write(uint16_t a);
+
+    const PPUAddressBus& cmemory() { return memory_; }
 
     // get the base address of the current nametable
     uint16_t nametable_base_address();
@@ -124,8 +128,8 @@ public:
     Sprite sprite(uint16_t index) const;
 
 protected:
-    friend class CartridgeInterface;
-    VideoMemory& memory() { return memory_; }
+    friend class Nes;
+    PPUAddressBus& memory() { return memory_; }
 
 private:
     // Draws the background pixel for the current cycle
@@ -145,7 +149,7 @@ private:
     void handle_ppu_data_register();
     uint8_t read_ppu_data();
 
-    // Make vram updates based on any activity on OMADMA
+    // Make vram updates based on any activity on OAMDMA
     void handle_oam_dma_register();
 
     void increment_cycle();
@@ -165,18 +169,20 @@ private:
     void set_oamdata_written() { oamdata_written_ = true; }
     void set_ppuaddr_written() { ppuaddr_written_ = true; }
     void set_ppudata_written() { ppudata_written_ = true; }
-    void set_omadma_written()  { omadma_written_ = true;  }
+    void set_oamdma_written()  { oamdma_written_ = true;  }
     
     bool oamaddr_written_{false};
     bool oamdata_written_{false};
     bool ppuaddr_written_{false};
     bool ppudata_written_{false};
-    bool omadma_written_{false};
+    bool oamdma_written_{false};
 
     Processor6502& processor_;
     NesDisplay& display_;
-    VideoMemory memory_;
+    PPUAddressBus memory_;
     OAMMemory oam_memory_;
+
+    std::unordered_map<uint16_t, uint8_t> registers_;
 
     std::vector<Sprite> sprites_;
 

@@ -42,15 +42,12 @@ void update_ui_opacity(UI property, double opacity)
                               opacity);
 }
 
-void update_ui_memory_view(const AddressBus& memory)
+void update_ui_memory_view(const AddressBus& m)
 {
     static const uint32_t BYTES_PER_LINE = 8;
 
     std::stringstream memstr;
     std::stringstream addrstr;
-
-    // Use a view to avoid triggering peripherals
-    AddressBus::View m = memory.view(0, AddressBus::ADDRESSABLE_MEMORY_SIZE);
 
     for (int32_t i = 0;i < AddressBus::ADDRESSABLE_MEMORY_SIZE;++i)
     {
