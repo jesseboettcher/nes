@@ -378,6 +378,11 @@ bool Processor6502::check_nmi()
 
 bool Processor6502::check_breakpoints()
 {
+    if (!breakpoints_.size())
+    {
+        return true; // continue
+    }
+
     if (breakpoints_.count(registers_.PC))
     {
         if (breakpoints_[registers_.PC])

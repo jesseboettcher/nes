@@ -193,21 +193,23 @@ uint8_t NesPPU::get_palette_index_for_pixel(uint8_t pixel_x, uint8_t pixel_y)
     const uint8_t tile_offset_x = tile_x % TILES_PER_ATTR_BYTE;
     const uint8_t tile_offset_y = tile_y % TILES_PER_ATTR_BYTE;
     
+    const uint8_t palette_index_byte = memory_[attribute_addr];
+
     if (tile_offset_x >= 2 && tile_offset_y >= 2) // bottom right
     {
-        return (memory_[attribute_addr] >> 6) & 0x03;
+        return (palette_index_byte >> 6) & 0x03;
     }
     else if (tile_offset_x <= 1 && tile_offset_y >= 2) // bottom left
     {
-        return (memory_[attribute_addr] >> 4) & 0x03;
+        return (palette_index_byte >> 4) & 0x03;
     }
     else if (tile_offset_x <= 1 && tile_offset_y <= 1) // top left
     {
-        return (memory_[attribute_addr] >> 0) & 0x03;
+        return (palette_index_byte >> 0) & 0x03;
     }
     else if (tile_offset_x >= 2 && tile_offset_y <= 1) // top right
     {
-        return (memory_[attribute_addr] >> 2) & 0x03;
+        return (palette_index_byte >> 2) & 0x03;
     }
 
     assert(false);
