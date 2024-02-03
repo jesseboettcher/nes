@@ -142,7 +142,7 @@ uint8_t NesPPU::get_pattern_tile_index_for_pixel(uint8_t pixel_x, uint8_t pixel_
     const uint8_t tile_x = pixel_x / NAMETABLE_TILE_SIZE;
     const uint16_t nt_addr = cached_nametable_address_ + tile_x + tile_y * NAMETABLE_WIDTH;
     
-    return memory_[nt_addr];;
+    return memory_[nt_addr];
 }
 
 uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_base_address,
@@ -153,12 +153,15 @@ uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_b
     // 2 bits per pixel. Each pixel is stored in a different plane. Pull the appropriate
     // bit out of each plane and store it into a 2 bit number which represents the color
     // table index for the pixel in this tile.
-    static constexpr uint16_t PATTERNTABLE_WIDTH = 16; // in bytes
-    const uint8_t patterntable_x = pattern_tile_index % PATTERNTABLE_WIDTH;
-    const uint8_t patterntable_y = pattern_tile_index / PATTERNTABLE_WIDTH;
+
+    // 0HNNNN NNNNPyyy
+    // |||||| |||||+++- T: Fine Y offset, the row number within a tile
+    // |||||| ||||+---- P: Bit plane (0: less significant bit; 1: more significant bit)
+    // ||++++-++++----- N: Tile number from name table
+    // |+-------------- H: Half of pattern table (0: "left"; 1: "right")
+    // +--------------- 0: Pattern table is at $0000-$1FFF
     const uint16_t pattern_tile_addr = pattern_table_base_address |
-                                       (patterntable_x << 4) |
-                                       (patterntable_y << 8) |
+                                       (pattern_tile_index << 4) |
                                        tile_pixel_y;
 
     const uint16_t patterntable_lo_bit_plane_select = 0x0000;

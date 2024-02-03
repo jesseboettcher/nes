@@ -250,128 +250,25 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
         }
         else if (std::regex_match(sub_cmd, detail_match, std::regex("tile")))
         {
-            LOG(ERROR) << base_match[3];
+            std::cout << "tile " << base_match[3] << std::endl;
             int32_t pattern_tile_index = std::stoi(base_match[3], 0, 0);
 
-            uint8_t patterntable_x = pattern_tile_index % 16;
-            uint8_t patterntable_y = pattern_tile_index / 16;
+
+            for (int32_t y = 0;y < 8;++y)
             {
-                const uint16_t pattern_tile_addr = nes.ppu().pattern_table_base_address() |
-                                                   (patterntable_x << 4) |
-                                                   (patterntable_y << 8);
-
-                PPUAddressBus::View v = 
-                    nes.ppu().cmemory().view(pattern_tile_addr, 16);
-
-                std::cout << "tile lo bits\n";
-                for (uint32_t i = 0;i < 8;++i)
+                for(int32_t x = 0;x < 8;++x)
                 {
-                    std::cout << + ((v.memory[pattern_tile_addr + i] & (1 << 7)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 6)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 5)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 4)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 3)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 2)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 1)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 0)) != 0) << "\n";
+                    uint8_t color_for_pixel =
+                        nes.ppu().get_colortable_index_for_tile_and_pixel(
+                                nes.ppu().pattern_table_base_address(),
+                                x,
+                                y,
+                                pattern_tile_index);
+
+                    std::cout << std::hex << std::setfill('0') << std::setw(2) << + color_for_pixel << " ";
                 }
-                std::cout << "\n";
+                std::cout << std::endl;
             }
-            {
-                const uint16_t patterntable_hi_bit_plane_select = 0x0008;
-                const uint16_t pattern_tile_addr = nes.ppu().pattern_table_base_address() |
-                                                   (patterntable_x << 4) |
-                                                   (patterntable_y << 8) |
-                                                   patterntable_hi_bit_plane_select;
-
-                PPUAddressBus::View v = 
-                    nes.ppu().cmemory().view(pattern_tile_addr, 16);
-
-                std::cout << "tile hi bits\n";
-                for (uint32_t i = 0;i < 8;++i)
-                {
-                    std::cout << + ((v.memory[pattern_tile_addr + i] & (1 << 7)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 6)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 5)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 4)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 3)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 2)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 1)) != 0) << " "
-                              << + ((v.memory[pattern_tile_addr + i] & (1 << 0)) != 0) << "\n";
-                }
-            }
-            {
-                uint16_t pixel_x = 8 * 10;
-                uint16_t pixel_y = 8 * 7;
-                std::cout << "color table for tile 10,7\n";
-                for (uint32_t i = 0;i < 8;i++)
-                {
-                    // Get the index into the color table from the pattern table tile
-                    
-                    std::cout << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 0, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 1, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 2, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 3, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 4, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 5, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 6, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 7, pixel_y, pattern_tile_index) << "\n";
-                }
-                pixel_x = 8 * 12;
-                pixel_y = 8 * 7;
-                std::cout << "color table for tile 12,7\n";
-                for (uint32_t i = 0;i < 8;i++)
-                {
-                    // Get the index into the color table from the pattern table tile
-                    
-                    std::cout << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 0, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 1, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 2, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 3, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 4, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 5, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 6, pixel_y, pattern_tile_index) << " "
-                              << + nes.ppu().get_colortable_index_for_tile_and_pixel(nes.ppu().pattern_table_base_address(), pixel_x + 7, pixel_y, pattern_tile_index) << "\n";
-                }
-
-            }
-
-            {
-                uint16_t pixel_x = 8 * 10;
-                uint16_t pixel_y = 8 * 7;
-                std::cout << "palette index for tile 10,7\n";
-                for (uint32_t i = 0;i < 8;i++)
-                {
-                    // Get the index into the color table from the pattern table tile
-                    
-                    std::cout << + nes.ppu().get_palette_index_for_pixel(pixel_x + 0, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 1, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 2, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 3, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 4, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 5, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 6, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 7, pixel_y) << "\n";
-                }
-                pixel_x = 8 * 12;
-                pixel_y = 8 * 7;
-                std::cout << "palette index for tile 12,7\n";
-                for (uint32_t i = 0;i < 8;i++)
-                {
-                    // Get the index into the color table from the pattern table tile
-                    
-                    std::cout << + nes.ppu().get_palette_index_for_pixel(pixel_x + 0, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 1, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 2, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 3, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 4, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 5, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 6, pixel_y) << " "
-                              << + nes.ppu().get_palette_index_for_pixel(pixel_x + 7, pixel_y) << "\n";
-                }
-
-            }
-
         }
         else if (std::regex_match(sub_cmd, detail_match, std::regex("attr")))
         {
