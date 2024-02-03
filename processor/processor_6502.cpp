@@ -25,7 +25,8 @@ void write_pc_to_file(unsigned int pc)
     outFile.close();
 }
 
-Processor6502::Processor6502()
+Processor6502::Processor6502(bool& nmi_signal)
+ : non_maskable_interrupt_(nmi_signal)
 {
     std::cout << "Launching Processor6502...\n";
 
@@ -360,7 +361,7 @@ bool Processor6502::ready_to_execute(const Instruction& pending_op)
 
 bool Processor6502::check_nmi()
 {
-    if (!non_maskable_interrupt_ || pending_operation_.values.size())
+    if (!non_maskable_interrupt_  || pending_operation_.values.size())
     {
         // do not break until NMI and the currently queued operation is complete
         return false;

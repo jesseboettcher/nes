@@ -146,7 +146,7 @@ class Processor6502
 public:
 	using CPUMemory = std::array<uint8_t, 2 * 1024>; // 2kb ram
 
-	Processor6502();
+	Processor6502(bool& nmi_signal);
 	~Processor6502();
 
 	// Reset registers and initialize PC to values specified by reset vector
@@ -233,7 +233,7 @@ private:
     CPUMemory internal_memory_;
 	AddressBus memory_{};
 	Registers registers_{};
-	bool non_maskable_interrupt_{false};
+	bool& non_maskable_interrupt_;
 
     // Needs fast lookups
     std::array<InstructionDetails, 0xFF> instr_table_;

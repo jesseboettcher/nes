@@ -14,9 +14,9 @@ Nes::Nes(std::shared_ptr<Cartridge> cartridge)
 {
     std::cout << "Launching Nes...\n";
 
-    processor_ = std::make_shared<Processor6502>();
+    processor_ = std::make_shared<Processor6502>(nmi_signal_);
     joypads_ = std::make_shared<Joypads>();
-    ppu_ = std::make_shared<NesPPU>(*processor_, display_);
+    ppu_ = std::make_shared<NesPPU>(processor_->memory(), display_, nmi_signal_);
 
     processor_->memory().attach_cpu(processor_);
     processor_->memory().attach_joypads(joypads_);

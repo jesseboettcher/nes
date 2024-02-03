@@ -8,7 +8,7 @@
 #include <iostream>
 #include <memory>
 
-class Processor6502;
+class AddressBus;
 
 class NesPPU
 {
@@ -120,7 +120,7 @@ public:
         Layer layer() const { return (attributes & 0x20) ? Layer::Background : Layer::Foreground; }
     };
     
-    NesPPU(Processor6502& processor, NesDisplay& display);
+    NesPPU(AddressBus& address_bus, NesDisplay& display, bool& nmi_signal);
     ~NesPPU();
 
     // Reset registers and initialize PC to values specified by reset vector
@@ -208,10 +208,11 @@ private:
     bool ppudata_written_{false};
     bool oamdma_written_{false};
 
-    Processor6502& processor_;
+    AddressBus& address_bus_;
     NesDisplay& display_;
     PPUAddressBus memory_;
     OAMMemory oam_memory_;
+    bool& nmi_signal_;
 
     Registers registers_;
 

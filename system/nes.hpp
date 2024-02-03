@@ -64,6 +64,7 @@ private:
 	NesDisplay display_;
 	std::shared_ptr<NesPPU> ppu_;
 	std::shared_ptr<Joypads> joypads_;
+	bool nmi_signal_{false};
 
     std::atomic<State> state_{State::IDLE};
     std::atomic<bool> should_exit_{false};

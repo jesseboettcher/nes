@@ -1,14 +1,15 @@
 #include "processor/nes_ppu.hpp"
 
 #include "platform/ui_properties.hpp"
-#include "processor/processor_6502.hpp"
+#include "processor/address_bus.hpp"
 #include "processor/utils.hpp"
 
 #include <glog/logging.h>
 
-NesPPU::NesPPU(Processor6502& processor, NesDisplay& display)
-: processor_(processor)
+NesPPU::NesPPU(AddressBus& address_bus, NesDisplay& display, bool& nmi_signal)
+: address_bus_(address_bus)
 , display_(display)
+, nmi_signal_(nmi_signal)
 {
     std::cout << "Launching NesPPU...\n";
 
@@ -69,7 +70,7 @@ bool NesPPU::step()
 
         if (registers_[PPUCTRL] & PPUCTRL_Generate_NMI)
         {
-            processor_.set_non_maskable_interrupt();
+            nmi_signal_ = true;
             display_.clear_screen(fetch_color_from_palette(0, 0)); // background color
 
             cached_nametable_address_ = nametable_base_address();
@@ -443,7 +444,7 @@ void NesPPU::handle_oam_dma_register()
         uint16_t oam_src_addr = registers_[OAMDMA] << 8;
         for (uint16_t i = 0;i < oam_memory_.size();i++)
         {
-            oam_memory_[i] = processor_.cmemory().read(oam_src_addr + i);
+            oam_memory_[i] = address_bus_.read(oam_src_addr + i);
         }
     }
 }
