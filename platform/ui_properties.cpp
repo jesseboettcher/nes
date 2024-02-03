@@ -83,8 +83,17 @@ void update_ui_memory_view(const AddressBus& m)
 
 void update_ui_sprites_view(const std::vector<NesPPU::Sprite>& sprite_data)
 {
-    UIContext& ui = UIContext::instance();
-    ui.sprites_model.update(sprite_data);
+    static auto last_update_time = std::chrono::high_resolution_clock::now();
+    auto current_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> delta = current_time - last_update_time;
+
+    if (delta.count() > 1000)
+    {
+        last_update_time = std::chrono::high_resolution_clock::now();
+
+        UIContext& ui = UIContext::instance();
+        ui.sprites_model.update(sprite_data);
+    }
 }
 
 bool is_button_pressed(Joypads::Button button)
