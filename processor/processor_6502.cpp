@@ -25,8 +25,9 @@ void write_pc_to_file(unsigned int pc)
     outFile.close();
 }
 
-Processor6502::Processor6502(bool& nmi_signal)
- : non_maskable_interrupt_(nmi_signal)
+Processor6502::Processor6502(AddressBus& address_bus, bool& nmi_signal)
+ : address_bus_(address_bus)
+ , non_maskable_interrupt_(nmi_signal)
 {
     std::cout << "Launching Processor6502...\n";
 
@@ -92,7 +93,7 @@ bool Processor6502::step()
     }
     else
     {
-        uint8_t next_instruction = memory_.read(registers_.PC++);
+        uint8_t next_instruction = address_bus_.read(registers_.PC++);
 
         if (cycle_count_ == 265329)
         {
@@ -178,8 +179,8 @@ void Processor6502::calculate_instruction_address(Instruction& i)
             inc_addr |= (static_cast<uint16_t>(i.values[2]) << 8) & 0xFF00;
             inc_addr |= (static_cast<uint8_t>(i.values[1]) + 1) & 0x00FF;
 
-            i.values[1] = memory_[addr];
-            i.values[2] = memory_[inc_addr];
+            i.values[1] = address_bus_[addr];
+            i.values[2] = address_bus_[inc_addr];
 
             break;
         }
@@ -189,15 +190,15 @@ void Processor6502::calculate_instruction_address(Instruction& i)
             // different pointers in the table are indexed via the X register
 
             addr = static_cast<uint8_t>(i.values[1] + registers_.X); // truncate addr to 1 byte
-            i.values[1] = memory_[addr];
-            i.values[2] = memory_[static_cast<uint8_t>(addr + 1)]; // truncate addr to 1 byte
+            i.values[1] = address_bus_[addr];
+            i.values[2] = address_bus_[static_cast<uint8_t>(addr + 1)]; // truncate addr to 1 byte
             break;
 
         case AddressingMode::INDIRECT_Y:
             // Indirect indexed - op data specifies a pointer to an address which contains a table
             // of pointers. This pointers are indexed via the Y register
-            addr = (memory_[static_cast<uint8_t>(i.values[1] + 1)]) << 8; // truncate addr to 1 byte
-            addr |= memory_[i.values[1]];
+            addr = (address_bus_[static_cast<uint8_t>(i.values[1] + 1)]) << 8; // truncate addr to 1 byte
+            addr |= address_bus_[i.values[1]];
 
             if ((addr & 0xFF00) != ((addr + registers_.Y) & 0xFF00))
             {
@@ -263,7 +264,7 @@ uint8_t Processor6502::execute_instruction(const Instruction& i)
              << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
     }
     
-    bool extra_cycles = instr_table_[i.opcode()].handler(i, registers_, memory_);
+    bool extra_cycles = instr_table_[i.opcode()].handler(i, registers_, address_bus_);
     instr_count_++;
 
     return extra_cycles + instr_table_[i.opcode()].cycles - instr_table_[i.opcode()].bytes;
@@ -347,9 +348,9 @@ bool Processor6502::ready_to_execute(const Instruction& pending_op)
     uint8_t opcode = pending_op.opcode();
     if (instr_table_[opcode].addr_mode == AddressingMode::INVALID)
     {
-        LOG(ERROR) << "test valid sig " << std::hex << +memory_[0x6001] << " " << +memory_[0x6002] << " " << +memory_[0x6003];
-        LOG(ERROR) << &memory_[0x6004];
-        LOG(ERROR) << "status " << +memory_[0x6000];
+        LOG(ERROR) << "test valid sig " << std::hex << +address_bus_[0x6001] << " " << +address_bus_[0x6002] << " " << +address_bus_[0x6003];
+        LOG(ERROR) << &address_bus_[0x6004];
+        LOG(ERROR) << "status " << +address_bus_[0x6000];
         LOG(ERROR) << "Unknown instruction: " << pending_op << " PC: " << registers_.PC << " cycle: " << std::dec << cycle_count_;
         log_ << "Unknown instruction: " << pending_op << " PC: " << registers_.PC << " cycle: " << std::dec << cycle_count_ << std::endl;
         print_memory(registers_.PC - 8, 64);
@@ -442,12 +443,12 @@ void Processor6502::dim_status()
 
 void Processor6502::print_memory(uint16_t address, uint16_t size) const
 {
-    std::cout << memory_.view(address, size);
+    std::cout << address_bus_.view(address, size);
 }
 
 void Processor6502::print_stack() const
 {
-    std::cout << memory_.stack_view(registers_.SP);
+    std::cout << address_bus_.stack_view(registers_.SP);
 }
 
 void Processor6502::print_registers()

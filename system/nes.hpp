@@ -60,6 +60,7 @@ private:
 	// cpu: master / 12
 	uint64_t clock_ticks_{0};
 
+	AddressBus address_bus_;
 	std::shared_ptr<Processor6502> processor_;
 	NesDisplay display_;
 	std::shared_ptr<NesPPU> ppu_;

@@ -146,7 +146,7 @@ class Processor6502
 public:
 	using CPUMemory = std::array<uint8_t, 2 * 1024>; // 2kb ram
 
-	Processor6502(bool& nmi_signal);
+	Processor6502(AddressBus& address_bus, bool& nmi_signal);
 	~Processor6502();
 
 	// Reset registers and initialize PC to values specified by reset vector
@@ -186,7 +186,7 @@ public:
 	void print_watchpoints();
 	void print_history(const uint16_t num_instructions);
 
-	const AddressBus& cmemory() { return memory_; }
+	const AddressBus& cmemory() { return address_bus_; }
 	const Registers& cregisters() { return registers_; }
 	uint64_t instruction_count() { return instr_count_; }
 	uint64_t cycle_count() { return cycle_count_; }
@@ -200,7 +200,7 @@ protected:
 	friend class NesPPU;
 	friend class Test6502;
 	friend class Nes;
-	AddressBus& memory() { return memory_; }
+	AddressBus& memory() { return address_bus_; }
 	Registers& registers() { return registers_; }
 
 	// internal memory accessors
@@ -230,8 +230,8 @@ private:
 
 	int32_t cycles_to_wait_{0};
 
+	AddressBus& address_bus_;
     CPUMemory internal_memory_;
-	AddressBus memory_{};
 	Registers registers_{};
 	bool& non_maskable_interrupt_;
 
