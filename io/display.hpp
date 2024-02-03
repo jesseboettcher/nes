@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <mutex>
 
 #include <QtQuick>
 #include <QQuickPaintedItem>
@@ -40,11 +41,15 @@ public:
     
     void swap_buffers()
     {
+        std::scoped_lock lock(display_buffer_lock_);
         draw_buffer_index_ = draw_buffer_index_ == 1 ? 0 : 1;
     }
     
-    bool ready_for_display_{true};
+    std::mutex& display_buffer_lock() { return display_buffer_lock_; }
+
 private:
+    std::mutex display_buffer_lock_;
+
     uint32_t draw_buffer_index_{0};
 
     Color offscreen_[2][HEIGHT][WIDTH];

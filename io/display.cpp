@@ -34,7 +34,6 @@ void NesDisplay::draw_pixel(int32_t x, int32_t y, Color color)
 
 void NesDisplay::render()
 {
-    ready_for_display_ = true;
     swap_buffers();
 
     refresh_callback_();
@@ -60,15 +59,16 @@ void NesDisplayView::refresh()
 
 void NesDisplayView::paint(QPainter *painter)
 {
+    std::scoped_lock lock(global_display_ptr->display_buffer_lock());
+    
     // TODO get instance of NesDisplay and retrieve buffer from it
     // TODO time this and look at more efficient options
 
-    QImage image((const uchar*)global_display_ptr->display_buffer(), NesDisplay::WIDTH, NesDisplay::HEIGHT,
+    QImage image((const uchar*)global_display_ptr->display_buffer(),
+                 NesDisplay::WIDTH, NesDisplay::HEIGHT,
                  QImage::Format_RGBA8888);
 
-    QPixmap pixmap;
-    pixmap.convertFromImage(image);
     painter->drawPixmap(0, 0, NesDisplay::WIDTH * 2, NesDisplay::HEIGHT * 2, // dest rect
-                        pixmap,
+                        QPixmap::fromImage(image),
                         0, 0,NesDisplay::WIDTH, NesDisplay::HEIGHT); // source rect
 }

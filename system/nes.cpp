@@ -132,15 +132,20 @@ void Nes::user_interrupt()
 void Nes::check_timer()
 {
     static auto start_time = std::chrono::high_resolution_clock::now();
+    static auto last_update_time = std::chrono::high_resolution_clock::now();
     static uint64_t last_cycle_count = 0;
     
     if (processor_->cycle_count() - last_cycle_count > 1789773)
     {
-        auto mark = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> delta = mark - start_time;
+        auto current_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> delta = current_time - last_update_time;
+        std::chrono::duration<double> uptime_seconds = current_time - start_time;
 
-        std::cout << (100.0 * 1000.0 / delta.count()) << std::dec << "% of realtime" << " cycle " << processor_->cycle_count() << std::endl;
-        start_time = std::chrono::high_resolution_clock::now();
+        std::cout << (100.0 * 1000.0 / delta.count()) << std::dec << "% of realtime" << " cycle "
+                  << "cycle " << processor_->cycle_count() << ", "
+                  << "uptime: " << uptime_seconds.count() << " seconds" << std::endl;
+
+        last_update_time = std::chrono::high_resolution_clock::now();
         last_cycle_count = processor_->cycle_count();
     }
 }

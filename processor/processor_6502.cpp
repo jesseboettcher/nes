@@ -403,7 +403,7 @@ void Processor6502::wait_for_cycle_count(uint8_t cycles)
     // auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(now - last_call_time_);
     // last_call_time_ = now;
 
-    // static constexpr std::chrono::nanoseconds NS_PER_CYCLE(55);//559); // @ 1.789773 MHz
+    // static constexpr std::chrono::nanoseconds NS_PER_CYCLE(559); // @ 1.789773 MHz
     // auto desired_duration = NS_PER_CYCLE * cycles;
     // if (elapsed < desired_duration)
     // {

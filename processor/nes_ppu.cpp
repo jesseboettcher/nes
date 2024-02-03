@@ -324,7 +324,7 @@ void NesPPU::render_sprites(Sprite::Layer layer) const
 
     if (layer == Sprite::Layer::Foreground)
     {
-        update_ui_sprites_view(sprites_);
+        // update_ui_sprites_view(sprites_);
     }
 }
 
