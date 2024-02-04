@@ -444,6 +444,8 @@ void Processor6502::print_status()
     update_ui(UI::c_flag_label, "C",
               registers_.is_status_register_flag_set(Registers::CARRY_FLAG) ? UI_NEAR_BLACK : UI_LIGHT_GREY);
 
+    update_ui_memory_view(cmemory());
+
     write_pc_to_file(registers_.PC);
 }
 

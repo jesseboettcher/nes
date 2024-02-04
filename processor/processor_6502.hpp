@@ -200,6 +200,7 @@ protected:
 	friend class NesPPU;
 	friend class Test6502;
 	friend class Nes;
+	friend class CommandPrompt;
 	AddressBus& memory() { return address_bus_; }
 	Registers& registers() { return registers_; }
 

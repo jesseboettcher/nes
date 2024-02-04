@@ -1,5 +1,6 @@
 #include "io/prompt.hpp"
 
+#include "platform/ui_properties.hpp"
 #include "processor/utils.hpp"
 #include "system/nes.hpp"
 
@@ -106,6 +107,7 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
     const std::regex exit_regex("exit|e|quit|q");
     const std::regex test_regex("test|t");
     const std::regex print_regex("(print|p) (r|registers|m|memory|s|stack|vram|v|n|nametable|tile|oam|sprite|attr|palette) ?(0x[A-Fa-f0-9]+|[0-9]+)? ?(0x[A-Fa-f0-9]+|[0-9]+)?");
+    const std::regex set_regex("(set) (m|memory) ?(0x[A-Fa-f0-9]+|[0-9]+)? ?(0x[A-Fa-f0-9]+|[0-9]+)");
     std::smatch base_match;
 
     if (cmd.size() == 0)
@@ -170,6 +172,20 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
         for (int32_t i = 0;i < i_count;i++)
         {
             nes.step_cpu_instruction();
+        }
+    }
+    else if (std::regex_match(cmd, base_match, set_regex) && base_match.size() > 1)
+    {
+        std::smatch detail_match;
+        std::string sub_cmd = base_match[2];
+
+        if (std::regex_match(sub_cmd, detail_match, std::regex("m|memory")))
+        {
+            assert(base_match.size() == 5);
+            uint8_t value = std::stoi(base_match[4], 0, 0);
+
+            nes.processor().memory()[std::stoi(base_match[3], 0, 0)] = value;
+            update_ui_memory_view(nes.processor().cmemory());
         }
     }
     else if (std::regex_match(cmd, base_match, print_regex) && base_match.size() > 1)
