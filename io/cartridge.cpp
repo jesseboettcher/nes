@@ -27,10 +27,9 @@ uint8_t Cartridge::read(uint16_t a) const
 {
     assert(a >= 0x4020);
 
-    if (a < 0x8000)
+    if (a >= 0x6000 && a < 0x8000)
     {
-        // valid cartridge address space, but not used by mapper 0
-        return 0;
+		return prg_ram_[a % 0x1000];
     }
 
     if (a >= 0xC000 && cpu_mapping_.size() == 0x4000) // 16kb roms (0x4000) are mirrored at 0xC000
@@ -39,6 +38,18 @@ uint8_t Cartridge::read(uint16_t a) const
 	}
 
 	return cpu_mapping_[a - 0x8000];
+}
+
+uint8_t& Cartridge::write(uint16_t a)
+{
+    if (a >= 0x6000 && a < 0x8000)
+    {
+		return prg_ram_[a % 0x1000];
+    }
+    assert(false);
+
+    static uint8_t dummy = 0;
+    return dummy;
 }
 
 uint8_t Cartridge::ppu_read(uint16_t a) const
@@ -59,6 +70,10 @@ void Cartridge::reset()
 			ppu_mapping_ = chr_rom().value();
 		}
 		return;
+	}
+	else if( mapper() == 1)
+	{
+
 	}
 	assert(false);
 }

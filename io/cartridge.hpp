@@ -12,6 +12,7 @@ public:
     bool valid() const;
 
     uint8_t read(uint16_t a) const;
+    uint8_t& write(uint16_t a);
     uint8_t ppu_read(uint16_t a) const;
 
     void reset();
@@ -50,6 +51,8 @@ private:
 
     std::span<uint8_t> buffer_;
     std::shared_ptr<MappedFile> file_;
+
+    std::array<uint8_t, 0x1000> prg_ram_; // 4kb, mapper 0 @ 0x6000, mirrored to 0x8000
 
     Format format_{Format::Unknown};
 

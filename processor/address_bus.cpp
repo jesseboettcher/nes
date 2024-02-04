@@ -77,7 +77,7 @@ uint8_t& AddressBus::write(int32_t a)
     }
     else
     {
-        assert(false); // shouldn't happen with mapper zero
+        return cartridge_->write(a);
     }
 
     assert(false);
