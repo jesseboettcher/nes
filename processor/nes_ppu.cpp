@@ -369,43 +369,21 @@ void NesPPU::handle_oam_data_register()
     if (registers_.had_write(OAMADDR))
     {
         registers_.clear_write_flag(OAMADDR);
-        {
-            oam_data_addr_ = registers_[OAMADDR];
-            // LOG(INFO) << "write OAMADDR " << std::hex << "0x" << oam_data_addr_;
-            // assert(false);
-        }
-        // if (oam_addr_write_count % 2 == 0)
-        // {
-        //  oam_data_addr_ = 0x0;
-
-        //  // first write, high address byte
-        //  oam_data_addr_ = processor_.cmemory()[OAMADDR] << 8;
-        //  LOG(INFO) << "write OAMADDR high byte";
-        // }
-        // else
-        // {
-        //  // second write, low address byte
-        //  oam_data_addr_ |= processor_.cmemory()[OAMADDR];
-        //  LOG(INFO) << "write OAMADDR low byte " << std::hex << "0x" << oam_data_addr_;
-
-        //  assert(false);
-        // }
+        oam_data_addr_ = registers_[OAMADDR];
     }
 
     if (registers_.had_write(OAMDATA))
     {
         registers_.clear_write_flag(OAMDATA);
+
         // If the processor wrote to the PPUDATA register, write that data to the address pointed to
         // by ppu_data_addr in video memory. Then increment the address by the amount specified by
         // the control register (either horizontal or down).
-        // LOG_IF(ERROR, oam_addr_write_count % 2 != 0) << "Error: "
-        //      << " write to OAMDATA without a fully set OAMADDR";
+        LOG_IF(ERROR, oam_addr_write_count % 2 != 0) << "Error: "
+             << " write to OAMDATA without a fully set OAMADDR";
 
-        // memory_[oam_data_addr_] = processor_.cmemory()[OAMDATA];
-        // oam_data_addr_ += oam_addr_increment_amount();
-
-        // mark fatal until a game uses this
-        LOG(FATAL) << "write OAMDATA at " << std::hex << "0x" << oam_data_addr_ << " data 0x" << +ppu_address_bus_.read(oam_data_addr_);
+        oam_memory_[oam_data_addr_] = registers_[OAMDATA];
+        oam_data_addr_ += 1;
     }
 }
 
