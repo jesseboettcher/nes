@@ -172,7 +172,6 @@ void Nes::update_state(State state)
         should_exit_ = false;
 
         processor_->print_status();
-        update_ui(UI::current_instruction_label, "");
         update_ui_opacity(UI::dimming_rect, 0.3);
 
         update_ui_memory_view(processor_->cmemory());
@@ -180,7 +179,6 @@ void Nes::update_state(State state)
     else if (state_ == State::RUNNING)
     {
         processor_->dim_status();
-        update_ui(UI::current_instruction_label, "");
         update_ui_opacity(UI::dimming_rect, 0.0);
     }
 }

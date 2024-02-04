@@ -21,7 +21,14 @@ UIWindow
         y_reg_label,
         sr_reg_label,
         sp_reg_label,
-        current_instruction_label,
+
+        n_flag_label,
+        o_flag_label,
+        b_flag_label,
+        i_flag_label,
+        z_flag_label,
+        c_flag_label,
+
         state_label
     ]
 
@@ -32,6 +39,17 @@ UIWindow
             if (element.textKey === key)
             {
                 element.text = UIController.get_text(key);
+                element.color = UIController.get_color(key);
+            }
+        }
+    }
+
+    function updateColor(key)
+    {
+        for (let element of text_elements)
+        {
+            if (element.textKey === key)
+            {
                 element.color = UIController.get_color(key);
             }
         }
@@ -122,7 +140,7 @@ UIWindow
         {
             font.bold: true
             font.family: defaultFontFamily
-            text: "Opcode: "
+            text: "Flags: "
             color: "#5F7784"
             anchors.right: parent.right
             horizontalAlignment: Text.AlignRight
@@ -226,17 +244,82 @@ UIWindow
             Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }
 
-        Text
+        Row
         {
-            id: current_instruction_label
-            property string textKey: "current_instruction_label"
+            spacing: 6
 
-            font.bold: true
-            color: "#455760"
-            font.family: defaultFontFamily
-            text: UIController.get_text(current_instruction_label.textKey)
+            Text
+            {
+                id: n_flag_label
+                property string textKey: "n_flag_label"
 
-            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
+                font.bold: true
+                color: "#BBBBBB"
+                font.family: defaultFontFamily
+                text: "N"
+
+                Component.onCompleted: { UIController.ui_changed.connect(updateColor) }
+            }
+            Text
+            {
+                id: o_flag_label
+                property string textKey: "o_flag_label"
+
+                font.bold: true
+                color: "#BBBBBB"
+                font.family: defaultFontFamily
+                text: "O"
+
+                Component.onCompleted: { UIController.ui_changed.connect(updateColor) }
+            }
+            Text
+            {
+                id: b_flag_label
+                property string textKey: "b_flag_label"
+
+                font.bold: true
+                color: "#BBBBBB"
+                font.family: defaultFontFamily
+                text: "B"
+
+                Component.onCompleted: { UIController.ui_changed.connect(updateColor) }
+            }
+            Text
+            {
+                id: i_flag_label
+                property string textKey: "i_flag_label"
+
+                font.bold: true
+                color: "#BBBBBB"
+                font.family: defaultFontFamily
+                text: "I"
+
+                Component.onCompleted: { UIController.ui_changed.connect(updateColor) }
+            }
+            Text
+            {
+                id: z_flag_label
+                property string textKey: "z_flag_label"
+
+                font.bold: true
+                color: "#BBBBBB"
+                font.family: defaultFontFamily
+                text: "Z"
+
+                Component.onCompleted: { UIController.ui_changed.connect(updateColor) }
+            }
+            Text
+            {
+                id: c_flag_label
+                property string textKey: "c_flag_label"
+
+                font.bold: true
+                color: "#BBBBBB"
+                font.family: defaultFontFamily
+                text: "C"
+
+                Component.onCompleted: { UIController.ui_changed.connect(updateColor) }
+            }
         }
     }
 }

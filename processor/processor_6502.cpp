@@ -251,10 +251,6 @@ uint8_t Processor6502::execute_instruction(const Instruction& i)
         // std::cout << cycle_count_ << "\t"
         //          << "0x0" << std::hex << std::uppercase << registers_.PC << "    "
         //        << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
-
-        std::stringstream str;
-        str << instr_table_[i.opcode()].assembler << ":" << i;
-        update_ui(UI::current_instruction_label, str.str(), UI_NEAR_BLACK);
     }
 
     if constexpr (ENABLE_CPU_LOGGING)
@@ -435,6 +431,19 @@ void Processor6502::print_status()
     update_ui(UI::sr_reg_label, strformat("0x%02X", registers_.SR()), UI_NEAR_BLACK);
     update_ui(UI::sp_reg_label, strformat("0x%02X", registers_.SP), UI_NEAR_BLACK);
 
+    update_ui(UI::n_flag_label, "N",
+              registers_.is_status_register_flag_set(Registers::NEGATIVE_FLAG) ? UI_NEAR_BLACK : UI_LIGHT_GREY);
+    update_ui(UI::o_flag_label, "O",
+              registers_.is_status_register_flag_set(Registers::OVERFLOW_FLAG) ? UI_NEAR_BLACK : UI_LIGHT_GREY);
+    update_ui(UI::b_flag_label, "B",
+              registers_.is_status_register_flag_set(Registers::BREAK_FLAG) ? UI_NEAR_BLACK : UI_LIGHT_GREY);
+    update_ui(UI::i_flag_label, "I",
+              registers_.is_status_register_flag_set(Registers::INTERRUPT_DISABLE_FLAG) ? UI_NEAR_BLACK : UI_LIGHT_GREY);
+    update_ui(UI::z_flag_label, "Z",
+              registers_.is_status_register_flag_set(Registers::ZERO_FLAG) ? UI_NEAR_BLACK : UI_LIGHT_GREY);
+    update_ui(UI::c_flag_label, "C",
+              registers_.is_status_register_flag_set(Registers::CARRY_FLAG) ? UI_NEAR_BLACK : UI_LIGHT_GREY);
+
     write_pc_to_file(registers_.PC);
 }
 
@@ -446,6 +455,12 @@ void Processor6502::dim_status()
     update_ui(UI::y_reg_label, std::nullopt, UI_LIGHT_GREY);
     update_ui(UI::sr_reg_label, std::nullopt, UI_LIGHT_GREY);
     update_ui(UI::sp_reg_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::n_flag_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::o_flag_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::b_flag_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::i_flag_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::z_flag_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::c_flag_label, std::nullopt, UI_LIGHT_GREY);
 }
 
 void Processor6502::print_memory(uint16_t address, uint16_t size) const
