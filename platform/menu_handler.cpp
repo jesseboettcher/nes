@@ -93,13 +93,19 @@ void MenuHandler::goto_memory()
         nullptr,                 // OK button pressed
         Qt::WindowFlags()        // Window flags
     );
-    int32_t address = std::stoi(text.toStdString(), nullptr, 0);
-    int32_t line_number = address / 8; /* number of bytes shown per line */
 
-    static const double ALIGNMENT_OFFSET = 0.00001; // needed to avoid a partial line shown
-    double scroll_position = line_number / (AddressBus::ADDRESSABLE_MEMORY_SIZE / 8.0) + ALIGNMENT_OFFSET;
+    try
+    {
+        int32_t address = std::stoi(text.toStdString(), nullptr, 0);
+        int32_t line_number = address / 8; /* number of bytes shown per line */
 
-    QMetaObject::invokeMethod(scroll_view_, "set_scroll_position", Q_ARG(QVariant, scroll_position));
+        static const double ALIGNMENT_OFFSET = 0.00001; // needed to avoid a partial line shown
+        double scroll_position = line_number / (AddressBus::ADDRESSABLE_MEMORY_SIZE / 8.0) + ALIGNMENT_OFFSET;
+
+        QMetaObject::invokeMethod(scroll_view_, "set_scroll_position", Q_ARG(QVariant, scroll_position));
+    }
+    catch (...)
+    {}
 }
 
 void MenuHandler::command()
