@@ -18,6 +18,7 @@ enum class UI
 	x_reg_label,
 	y_reg_label,
 	sp_reg_label,
+	sr_reg_label,
 	current_instruction_label,
 	state_label,
 	dimming_rect,

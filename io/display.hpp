@@ -45,6 +45,8 @@ public:
         draw_buffer_index_ = draw_buffer_index_ == 1 ? 0 : 1;
     }
     
+    bool is_pixel_transparent(int32_t x, int32_t y);
+
     std::mutex& display_buffer_lock() { return display_buffer_lock_; }
 
 private:

@@ -1,7 +1,7 @@
 #pragma once
 
+#include "processor/ppu_address_bus.hpp"
 #include "processor/processor_6502.hpp"
-#include "processor/video_memory.hpp"
 
 #include <ostream>
 

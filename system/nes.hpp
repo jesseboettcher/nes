@@ -5,8 +5,8 @@
 #include "io/files.hpp"
 #include "io/joypads.hpp"
 #include "processor/nes_ppu.hpp"
+#include "processor/ppu_address_bus.hpp"
 #include "processor/processor_6502.hpp"
-#include "processor/video_memory.hpp"
 
 #include <atomic>
 #include <chrono>

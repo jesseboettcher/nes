@@ -2,8 +2,8 @@
 
 #include "platform/ui_properties.hpp"
 #include "processor/address_bus.hpp"
+#include "processor/ppu_address_bus.hpp"
 #include "processor/utils.hpp"
-#include "processor/video_memory.hpp"
 
 #include <glog/logging.h>
 
@@ -86,6 +86,7 @@ bool NesPPU::step()
     if (check_vblank_falling_edge())
     {
         registers_[PPUSTATUS] &= ~PPUSTATUS_vblank;
+        registers_[PPUSTATUS] &= ~PPUSTATUS_sprite0_hit;
     }
 
     return true;
@@ -266,7 +267,7 @@ void NesPPU::read_sprite_oam()
     }
 }
 
-void NesPPU::render_sprites(Sprite::Layer layer) const
+void NesPPU::render_sprites(Sprite::Layer layer)
 {
     LOG_IF(FATAL, sprite_type() == SpriteType::Sprite_8x16) << "sprite size 8x16 not supported yet";
 
@@ -316,6 +317,16 @@ void NesPPU::render_sprites(Sprite::Layer layer) const
             if (colortable_index == 0)
             {
                 continue; // transparent
+            }
+
+
+            if (i == 0) // sprite 0 hit check
+            {
+                // TODO only when hitting a non-transparent background pixel
+                if (!(registers_[PPUSTATUS] & PPUSTATUS_sprite0_hit))
+                {
+                    registers_[PPUSTATUS] |= PPUSTATUS_vblank;
+                }
             }
 
             // Determine which palette to use

@@ -39,6 +39,11 @@ void NesDisplay::render()
     refresh_callback_();
 }
 
+bool NesDisplay::is_pixel_transparent(int32_t x, int32_t y)
+{
+    return offscreen_[draw_buffer_index()][y][x].a == 0xFF;
+}
+
 NesDisplayView::NesDisplayView(QQuickItem *parent)
 {
     // bind the nes display refresh callback to the QT signal in ViewUpdateRelay which makes sure

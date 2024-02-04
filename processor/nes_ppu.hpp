@@ -185,7 +185,7 @@ private:
     void read_sprite_oam();
 
     // Draws all the foreground or background sprites at once
-    void render_sprites(Sprite::Layer layer) const;
+    void render_sprites(Sprite::Layer layer);
 
     // Make vram updates based on any activity on OAMADDR and OAMDATA
     void handle_oam_data_register();

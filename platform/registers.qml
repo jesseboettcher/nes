@@ -7,7 +7,7 @@ UIWindow
     id: registers_window
     objectName: "registers_window"
     width: 280
-    height: 165
+    height: 185
     visible: true
     color: "#F8F8FB"
     title: qsTr("Registers")
@@ -19,6 +19,7 @@ UIWindow
         a_reg_label,
         x_reg_label,
         y_reg_label,
+        sr_reg_label,
         sp_reg_label,
         current_instruction_label,
         state_label
@@ -104,6 +105,15 @@ UIWindow
             font.bold: true
             font.family: defaultFontFamily
             text: "SP: "
+            color: "#5F7784"
+            anchors.right: parent.right
+            horizontalAlignment: Text.AlignRight
+        }
+        Text
+        {
+            font.bold: true
+            font.family: defaultFontFamily
+            text: "SR: "
             color: "#5F7784"
             anchors.right: parent.right
             horizontalAlignment: Text.AlignRight
@@ -199,6 +209,19 @@ UIWindow
             color: "#455760"
             font.family: defaultFontFamily
             text: UIController.get_text(sp_reg_label.textKey)
+
+            Component.onCompleted: { UIController.ui_changed.connect(updateText) }
+        }
+
+        Text
+        {
+            id: sr_reg_label
+            property string textKey: "sr_reg_label"
+
+            font.bold: true
+            color: "#455760"
+            font.family: defaultFontFamily
+            text: UIController.get_text(sr_reg_label.textKey)
 
             Component.onCompleted: { UIController.ui_changed.connect(updateText) }
         }

@@ -429,10 +429,11 @@ void Processor6502::print_status()
     //        << "      (cycle " << std::dec << cycle_count_ << ")" << std::endl;
 
     update_ui(UI::pc_label,    strformat("0x%04X", registers_.PC), UI_NEAR_BLACK);
-    update_ui(UI::a_reg_label, strformat("0x%04X", registers_.A), UI_NEAR_BLACK);
-    update_ui(UI::x_reg_label, strformat("0x%04X", registers_.X), UI_NEAR_BLACK);
-    update_ui(UI::y_reg_label, strformat("0x%04X", registers_.Y), UI_NEAR_BLACK);
-    update_ui(UI::sp_reg_label, strformat("0x%04X", registers_.SP), UI_NEAR_BLACK);
+    update_ui(UI::a_reg_label, strformat("0x%02X", registers_.A), UI_NEAR_BLACK);
+    update_ui(UI::x_reg_label, strformat("0x%02X", registers_.X), UI_NEAR_BLACK);
+    update_ui(UI::y_reg_label, strformat("0x%02X", registers_.Y), UI_NEAR_BLACK);
+    update_ui(UI::sr_reg_label, strformat("0x%02X", registers_.SR()), UI_NEAR_BLACK);
+    update_ui(UI::sp_reg_label, strformat("0x%02X", registers_.SP), UI_NEAR_BLACK);
 
     write_pc_to_file(registers_.PC);
 }
@@ -443,6 +444,7 @@ void Processor6502::dim_status()
     update_ui(UI::a_reg_label, std::nullopt, UI_LIGHT_GREY);
     update_ui(UI::x_reg_label, std::nullopt, UI_LIGHT_GREY);
     update_ui(UI::y_reg_label, std::nullopt, UI_LIGHT_GREY);
+    update_ui(UI::sr_reg_label, std::nullopt, UI_LIGHT_GREY);
     update_ui(UI::sp_reg_label, std::nullopt, UI_LIGHT_GREY);
 }
 
