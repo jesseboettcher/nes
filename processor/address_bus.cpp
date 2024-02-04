@@ -13,7 +13,7 @@ const uint8_t AddressBus::read(int32_t a) const
     }
     else if (a <= 0x3FFF) // PPU registers, mirrored after 0x2000 - 0x2007
     {
-        return ppu_->read(0x2000 + (a % 8));
+        return ppu_->read_register(0x2000 + (a % 8));
     }
     else if (a <= 0x4017) // APU, IO registers
     {
@@ -23,7 +23,7 @@ const uint8_t AddressBus::read(int32_t a) const
         }
         if (a == 0x4014) // OAM DMA
         {
-            return ppu_->read(a);
+            return ppu_->read_register(a);
         }
 
         // APU
@@ -54,7 +54,7 @@ uint8_t& AddressBus::write(int32_t a)
     }
     else if (a <= 0x3FFF) // PPU registers, mirrored after 0x2000 - 0x2007
     {
-        return ppu_->write(0x2000 + (a % 8));
+        return ppu_->write_register(0x2000 + (a % 8));
     }
     else if (a <= 0x4017) // APU, IO registers
     {
@@ -64,7 +64,7 @@ uint8_t& AddressBus::write(int32_t a)
         }
         if (a == 0x4014) // OAM DMA
         {
-            return ppu_->write(a);
+            return ppu_->write_register(a);
         }
 
         // APU

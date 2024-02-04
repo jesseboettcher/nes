@@ -1,7 +1,7 @@
 #pragma once
 
 #include "processor/processor_6502.hpp"
-#include "processor/nes_ppu.hpp"
+#include "processor/video_memory.hpp"
 
 #include <ostream>
 

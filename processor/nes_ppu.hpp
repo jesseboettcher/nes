@@ -1,7 +1,6 @@
 #pragma once
 
 #include "io/display.hpp"
-#include "processor/video_memory.hpp"
 
 #include <array>
 #include <cstdint>
@@ -9,6 +8,7 @@
 #include <memory>
 
 class AddressBus;
+class PPUAddressBus;
 
 class NesPPU
 {
@@ -46,7 +46,8 @@ public:
     static constexpr uint16_t NAMETABLE_TILE_SIZE = 8;
 
     using OAMMemory = std::array<uint8_t, 256>;
-
+    using PaletteRam = std::array<uint8_t, 0x20>;
+    using VideoMemory = std::array<uint8_t, 2 * 1024>;
 
     class Registers
     {
@@ -120,7 +121,7 @@ public:
         Layer layer() const { return (attributes & 0x20) ? Layer::Background : Layer::Foreground; }
     };
     
-    NesPPU(AddressBus& address_bus, NesDisplay& display, bool& nmi_signal);
+    NesPPU(AddressBus& address_bus, PPUAddressBus& ppu_address_bus, NesDisplay& display, bool& nmi_signal);
     ~NesPPU();
 
     // Reset registers and initialize PC to values specified by reset vector
@@ -133,10 +134,10 @@ public:
     bool step();
 
     // Accessors for the PPU registers from AddressBus
-    uint8_t read(uint16_t a) const;
-    uint8_t& write(uint16_t a);
+    uint8_t read_register(uint16_t a) const;
+    uint8_t& write_register(uint16_t a);
 
-    const PPUAddressBus& cmemory() { return memory_; }
+    const PPUAddressBus& cmemory() { return ppu_address_bus_; }
 
     // get the base address of the current nametable
     uint16_t nametable_base_address();
@@ -167,7 +168,13 @@ public:
 
 protected:
     friend class Nes;
-    PPUAddressBus& memory() { return memory_; }
+    PPUAddressBus& memory() { return ppu_address_bus_; }
+
+    friend class PPUAddressBus;
+    uint8_t read(uint16_t a) const;
+    uint8_t& write(uint16_t a);
+    uint8_t read_palette_ram(uint16_t a) const;
+    uint8_t& write_palette_ram(uint16_t a);
 
 private:
     // Draws the background pixel for the current cycle
@@ -209,12 +216,15 @@ private:
     bool oamdma_written_{false};
 
     AddressBus& address_bus_;
+    PPUAddressBus& ppu_address_bus_;
+
     NesDisplay& display_;
-    PPUAddressBus memory_;
     OAMMemory oam_memory_;
     bool& nmi_signal_;
 
     Registers registers_;
+    VideoMemory internal_memory_;
+    PaletteRam palette_ram_;
 
     std::vector<Sprite> sprites_;
 

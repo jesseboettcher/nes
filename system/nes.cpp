@@ -16,11 +16,13 @@ Nes::Nes(std::shared_ptr<Cartridge> cartridge)
 
     processor_ = std::make_shared<Processor6502>(address_bus_, nmi_signal_);
     joypads_ = std::make_shared<Joypads>();
-    ppu_ = std::make_shared<NesPPU>(address_bus_, display_, nmi_signal_);
+    ppu_ = std::make_shared<NesPPU>(address_bus_, ppu_address_bus_, display_, nmi_signal_);
 
     address_bus_.attach_cpu(processor_);
     address_bus_.attach_joypads(joypads_);
     address_bus_.attach_ppu(ppu_);
+
+    ppu_address_bus_.attach_ppu(ppu_);
 
     load_cartridge(cartridge);
     display_.init();
@@ -43,7 +45,7 @@ bool Nes::load_cartridge(std::shared_ptr<Cartridge> cartridge)
     if (cartridge_ && cartridge_->valid())
     {
         address_bus_.attach_cartridge(cartridge_);
-        ppu_->memory().attach_cartridge(cartridge_);
+        ppu_address_bus_.attach_cartridge(cartridge_);
 
         cartridge_->reset();
         processor_->reset();

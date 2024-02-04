@@ -16,6 +16,9 @@ public:
 
     void reset();
 
+    bool horizontal_nametable_mirroring() const { return buffer_[6] & 0x01; }
+    bool vertical_nametable_mirroring() const { return !horizontal_nametable_mirroring(); }
+
     friend std::ostream& operator << (std::ostream& os, const Cartridge &f);
 
 private:
@@ -41,7 +44,6 @@ private:
 
     bool has_trainer() const;
     bool has_battery() const { return buffer_[6] & 0x02; }
-    bool horizontal_nametable_mirroring() const { return buffer_[6] & 0x01; }
 
     std::span<uint8_t> cpu_mapping_; // data mapped to 0x8000 - 0xBFFF
     std::span<uint8_t> ppu_mapping_; // data mapped to 0x0000 - 0x1FFF

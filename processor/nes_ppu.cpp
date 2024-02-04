@@ -3,11 +3,13 @@
 #include "platform/ui_properties.hpp"
 #include "processor/address_bus.hpp"
 #include "processor/utils.hpp"
+#include "processor/video_memory.hpp"
 
 #include <glog/logging.h>
 
-NesPPU::NesPPU(AddressBus& address_bus, NesDisplay& display, bool& nmi_signal)
+NesPPU::NesPPU(AddressBus& address_bus, PPUAddressBus& ppu_address_bus, NesDisplay& display, bool& nmi_signal)
 : address_bus_(address_bus)
+, ppu_address_bus_(ppu_address_bus)
 , display_(display)
 , nmi_signal_(nmi_signal)
 {
@@ -22,9 +24,6 @@ NesPPU::NesPPU(AddressBus& address_bus, NesDisplay& display, bool& nmi_signal)
     registers_[PPUADDR] = 0x00;
     registers_[PPUDATA] = 0x00;
     registers_[OAMDMA] = 0x00;
-
-    cached_nametable_address_ = nametable_base_address();
-    cached_patterntable_address = pattern_table_base_address();
 }
 
 NesPPU::~NesPPU()
@@ -34,8 +33,11 @@ NesPPU::~NesPPU()
 
 void NesPPU::reset()
 {
-    memory_.clear();
+    internal_memory_.fill(0);
     display_.clear_screen(NesDisplay::Color({0x00, 0x00, 0x00, 0xFF}));
+
+    cached_nametable_address_ = nametable_base_address();
+    cached_patterntable_address = pattern_table_base_address();
 }
 
 void NesPPU::run()
@@ -89,14 +91,14 @@ bool NesPPU::step()
     return true;
 }
 
-uint8_t NesPPU::read(uint16_t a) const
+uint8_t NesPPU::read_register(uint16_t a) const
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
 
     return registers_[a];
 }
 
-uint8_t& NesPPU::write(uint16_t a)
+uint8_t& NesPPU::write_register(uint16_t a)
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
 
@@ -142,7 +144,7 @@ uint8_t NesPPU::get_pattern_tile_index_for_pixel(uint8_t pixel_x, uint8_t pixel_
     const uint8_t tile_x = pixel_x / NAMETABLE_TILE_SIZE;
     const uint16_t nt_addr = cached_nametable_address_ + tile_x + tile_y * NAMETABLE_WIDTH;
     
-    return memory_[nt_addr];
+    return ppu_address_bus_.read(nt_addr);
 }
 
 uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_base_address,
@@ -169,10 +171,10 @@ uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_b
     const uint8_t patterntable_bit_for_pixel = 7 - tile_pixel_x;
 
     uint16_t patterntable_value = 0;
-    patterntable_value |= (memory_[pattern_tile_addr | patterntable_lo_bit_plane_select] &
+    patterntable_value |= (ppu_address_bus_.read(pattern_tile_addr | patterntable_lo_bit_plane_select) &
                           (1 << patterntable_bit_for_pixel)) >> patterntable_bit_for_pixel;
 
-    patterntable_value |= ((memory_[pattern_tile_addr | patterntable_hi_bit_plane_select] &
+    patterntable_value |= ((ppu_address_bus_.read(pattern_tile_addr | patterntable_hi_bit_plane_select) &
                           (1 << patterntable_bit_for_pixel)) >> (patterntable_bit_for_pixel))
                           << 1; // after getting bit and shifting to bit 0, shift left 1
 
@@ -196,7 +198,7 @@ uint8_t NesPPU::get_palette_index_for_pixel(uint8_t pixel_x, uint8_t pixel_y)
     const uint8_t tile_offset_x = tile_x % TILES_PER_ATTR_BYTE;
     const uint8_t tile_offset_y = tile_y % TILES_PER_ATTR_BYTE;
     
-    const uint8_t palette_index_byte = memory_[attribute_addr];
+    const uint8_t palette_index_byte = ppu_address_bus_.read(attribute_addr);
 
     if (tile_offset_x >= 2 && tile_offset_y >= 2) // bottom right
     {
@@ -224,7 +226,7 @@ NesDisplay::Color NesPPU::fetch_color_from_palette(uint8_t palette_index, uint8_
     const uint16_t palette_base_address = 0x3F00;
     const uint16_t palette_addr = palette_base_address +
                                   (3 + 1) * palette_index; // 3 colors per, one space between
-    const uint8_t palette_value = memory_[palette_addr + colortable_index];
+    const uint8_t palette_value = ppu_address_bus_.read(palette_addr + colortable_index);
 
     // RGB with each represented from 0-7. Scale each component to fill the 0-255 range when
     // generating the NestDisplay color to return.
@@ -392,7 +394,7 @@ void NesPPU::handle_oam_data_register()
         // oam_data_addr_ += oam_addr_increment_amount();
 
         // mark fatal until a game uses this
-        LOG(FATAL) << "write OAMDATA at " << std::hex << "0x" << oam_data_addr_ << " data 0x" << +memory_[oam_data_addr_];
+        LOG(FATAL) << "write OAMDATA at " << std::hex << "0x" << oam_data_addr_ << " data 0x" << +ppu_address_bus_.read(oam_data_addr_);
     }
 }
 
@@ -425,7 +427,7 @@ void NesPPU::handle_ppu_data_register()
         LOG_IF(ERROR, ppu_addr_write_count % 2 != 0) << "Error: "
                 << " write to PPUDATA without a fully set PPUADDR";
 
-        memory_[ppu_data_addr_] = registers_[PPUDATA];
+        ppu_address_bus_.write(ppu_data_addr_) = registers_[PPUDATA];
         ppu_data_addr_ += ppu_addr_increment_amount();
     }
 }
@@ -437,7 +439,7 @@ uint8_t NesPPU::read_ppu_data()
 
     ppu_data_addr_ += ppu_addr_increment_amount();
 
-    return memory_[ppu_data_addr_];
+    return ppu_address_bus_.read(ppu_data_addr_);
 }
 
 void NesPPU::handle_oam_dma_register()
@@ -493,7 +495,7 @@ bool NesPPU::check_rendering_falling_edge() const
 
 uint16_t NesPPU::pattern_table_base_address() const
 {
-    switch (read(PPUCTRL) & PPUCTRL_Backgroundtable_Select)
+    switch (read_register(PPUCTRL) & PPUCTRL_Backgroundtable_Select)
     {
         case 0:
             return 0x0000;
@@ -507,7 +509,7 @@ uint16_t NesPPU::pattern_table_base_address() const
 
 uint16_t NesPPU::nametable_base_address()
 {
-    switch (read(PPUCTRL) & PPUCTRL_Nametable_Select)
+    switch (read_register(PPUCTRL) & PPUCTRL_Nametable_Select)
     {
         case 0:
             return 0x2000;
@@ -527,7 +529,7 @@ uint16_t NesPPU::nametable_base_address()
 
 uint16_t NesPPU::sprite_pattern_table_address() const
 {
-    switch(read(PPUCTRL) & PPUCTRL_SpriteTable_Addr)
+    switch(read_register(PPUCTRL) & PPUCTRL_SpriteTable_Addr)
     {
         case 0:
             return 0x0000;
@@ -541,7 +543,7 @@ uint16_t NesPPU::sprite_pattern_table_address() const
 
 NesPPU::SpriteType NesPPU::sprite_type() const
 {
-    if (read(PPUCTRL) & PPUCTRL_SpriteSize_Select)
+    if (read_register(PPUCTRL) & PPUCTRL_SpriteSize_Select)
     {
         return SpriteType::Sprite_8x16;
     }
@@ -550,7 +552,7 @@ NesPPU::SpriteType NesPPU::sprite_type() const
 
 uint16_t NesPPU::ppu_addr_increment_amount()
 {
-    switch (read(PPUCTRL) & PPUCTRL_Incrmement_Direction)
+    switch (read_register(PPUCTRL) & PPUCTRL_Incrmement_Direction)
     {
         case 0:
             return 1; // increment horizontally across the buffer
@@ -560,4 +562,24 @@ uint16_t NesPPU::ppu_addr_increment_amount()
     }
     assert(false);
     return 0;
+}
+
+uint8_t NesPPU::read(uint16_t a) const
+{
+    return internal_memory_[a];
+}
+
+uint8_t& NesPPU::write(uint16_t a)
+{
+    return internal_memory_[a];
+}
+
+uint8_t NesPPU::read_palette_ram(uint16_t a) const
+{
+    return palette_ram_[a];
+}
+
+uint8_t& NesPPU::write_palette_ram(uint16_t a)
+{
+    return palette_ram_[a];
 }

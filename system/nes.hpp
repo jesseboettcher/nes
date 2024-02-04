@@ -6,6 +6,7 @@
 #include "io/joypads.hpp"
 #include "processor/nes_ppu.hpp"
 #include "processor/processor_6502.hpp"
+#include "processor/video_memory.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -61,6 +62,8 @@ private:
 	uint64_t clock_ticks_{0};
 
 	AddressBus address_bus_;
+	PPUAddressBus ppu_address_bus_;
+
 	std::shared_ptr<Processor6502> processor_;
 	NesDisplay display_;
 	std::shared_ptr<NesPPU> ppu_;
