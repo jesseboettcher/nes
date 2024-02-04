@@ -763,6 +763,10 @@ static uint8_t RTS(const Instruction& i, Registers& r, AddressBus& m)
 
 static uint8_t SBC(const Instruction& i, Registers& r, AddressBus& m)
 {
+    // Subtract with carry subtracts M from A and an implied carry and the contents of the carry flag
+    // There is no subtract without a carry instruction. Must set the carry flag explicitly (SEC)
+    // before an SBC to do a subtraction without a carry. 
+
     // A - M - C -> A
     // N   Z   C   I   D   V
     // +   +   +   -   -   +
@@ -793,17 +797,9 @@ static uint8_t SBC(const Instruction& i, Registers& r, AddressBus& m)
     else
     {
         int8_t carry = r.is_status_register_flag_set(Registers::CARRY_FLAG) ? 1 : 0;
-        int8_t result = static_cast<uint8_t>(r.A) - static_cast<uint8_t>(data) + carry;
+        int8_t result = static_cast<uint8_t>(r.A) - static_cast<uint8_t>(data) - (1 - carry);
 
-        result -= 1; // This is needed to pass the 1k SBC tests (0xE1) in the TomHarte test suite
-                     // why?: https://github.com/TomHarte/ProcessorTests/tree/main/nes6502
-
-        // LOG(INFO) << std::dec << " A " << +r.A
-        //           << " d " << +static_cast<uint8_t>(data)
-        //           << " c " << +carry
-        //           << " = " << +result << " " << std::dec << +static_cast<uint8_t>(result);
-
-        r.set_status_register_flag(Registers::CARRY_FLAG, r.A >= data);
+        r.set_status_register_flag(Registers::CARRY_FLAG, static_cast<int16_t>(data + (1 - carry)) > r.A);
         r.A = result & 0x00FF;
     }
 
