@@ -4,6 +4,7 @@
 #include "io/display.hpp"
 #include "io/files.hpp"
 #include "io/joypads.hpp"
+#include "processor/nes_apu.hpp"
 #include "processor/nes_ppu.hpp"
 #include "processor/ppu_address_bus.hpp"
 #include "processor/processor_6502.hpp"
@@ -66,6 +67,7 @@ private:
 
 	std::shared_ptr<Processor6502> processor_;
 	NesDisplay display_;
+	std::shared_ptr<NesAPU> apu_;
 	std::shared_ptr<NesPPU> ppu_;
 	std::shared_ptr<Joypads> joypads_;
 	bool nmi_signal_{false};

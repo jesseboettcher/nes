@@ -194,6 +194,10 @@ void create_menus()
 
 int main(int argc, char *argv[])
 {
+    google::InitGoogleLogging(argv[0]);
+    FLAGS_logtostderr = 1;
+    FLAGS_minloglevel = google::INFO;
+
     QApplication app(argc, argv);
 
     // Launch NES - nes needs to be created first because the QT NesDisplayView installs its

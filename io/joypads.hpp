@@ -6,7 +6,7 @@ class Joypads
 {
 public:
     static constexpr uint16_t JOYPAD1 = 0x4016;
-    static constexpr uint16_t JOYPAD2 = 0x4017;
+    static constexpr uint16_t JOYPAD2 = 0x4017; // for reads, writes go to APU frame counter
 
     enum class Button
     {
