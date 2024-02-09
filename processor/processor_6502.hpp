@@ -185,6 +185,7 @@ public:
 	void print_breakpoints();
 	void print_watchpoints();
 	void print_history(const uint16_t num_instructions);
+	void update_execution_log(const Instruction& i, uint16_t previous_pc);
 
 	const AddressBus& cmemory() { return address_bus_; }
 	const Registers& cregisters() { return registers_; }

@@ -88,6 +88,7 @@ static uint8_t ASL(const Instruction& i, Registers& r, AddressBus& m)
 
     r.set_status_register_flag(Registers::ZERO_FLAG, !data);
     r.set_status_register_flag(Registers::CARRY_FLAG, set_carry);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, data & 0x80);
 
     if (i.addr_mode == AddressingMode::ACCUMULATOR)
     {
@@ -175,7 +176,7 @@ static uint8_t BIT(const Instruction& i, Registers& r, AddressBus& m)
     const AddressBus& cm = m;
     r.set_status_register_flag(Registers::NEGATIVE_FLAG, cm[i.address()] & 0x80);
     r.set_status_register_flag(Registers::OVERFLOW_FLAG, cm[i.address()] & 0x40);
-    r.set_status_register_flag(Registers::ZERO_FLAG, cm[i.address()] & r.A);
+    r.set_status_register_flag(Registers::ZERO_FLAG, (cm[i.address()] & r.A) == 0);
 
     return 0;
 }
@@ -266,12 +267,14 @@ static uint8_t BRK(const Instruction& i, Registers& r, AddressBus& m)
     // N   Z   C   I   D   V
     // -   -   -   1   -   -
     uint16_t save_pc = i.nmi ? r.PC : r.PC + 1 + 0 /* was already incremented by 1 to get here */;
-    r.set_status_register_flag(Registers::BREAK_FLAG, true);
 
     m.stack_push(r.SP, static_cast<uint8_t>((save_pc >> 8) & 0x00FF));
     m.stack_push(r.SP, static_cast<uint8_t>(save_pc & 0x00FF));
 
     m.stack_push(r.SP, r.SR());
+
+    r.set_status_register_flag(Registers::BREAK_FLAG, true);
+    r.set_status_register_flag(Registers::INTERRUPT_DISABLE_FLAG, true);
 
     const AddressBus& cm = m;
     r.PC = i.nmi ? (cm[NMI_low_addr] | (cm[NMI_hi_addr] << 8)) :
@@ -368,11 +371,14 @@ static uint8_t CMP(const Instruction& i, Registers& r, AddressBus& m)
     // Y - M
     // N    Z   C   I   D   V
     // +    +   +   -   -   -
+    uint8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : m.read(i.address());
     uint8_t extra_cycles_used = i.fetch_crossed_page_boundary ? 1 : 0;
 
-    r.set_status_register_flag(Registers::CARRY_FLAG, r.A >= i.data());
-    r.set_status_register_flag(Registers::ZERO_FLAG, r.A == i.data());
-    r.set_status_register_flag(Registers::NEGATIVE_FLAG, r.A < i.data());
+    uint8_t difference = r.A - data;
+
+    r.set_status_register_flag(Registers::CARRY_FLAG, r.A >= data);
+    r.set_status_register_flag(Registers::ZERO_FLAG, difference == 0);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, difference & 0x80);
 
     return extra_cycles_used;
 }
@@ -382,9 +388,13 @@ static uint8_t CPX(const Instruction& i, Registers& r, AddressBus& m)
     // Y - M
     // N    Z   C   I   D   V
     // +    +   +   -   -   -
-    r.set_status_register_flag(Registers::CARRY_FLAG, r.X >= i.data());
-    r.set_status_register_flag(Registers::ZERO_FLAG, r.X == i.data());
-    r.set_status_register_flag(Registers::NEGATIVE_FLAG, r.X < i.data());
+    uint8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : m.read(i.address());
+
+    uint8_t difference = r.X - data;
+
+    r.set_status_register_flag(Registers::CARRY_FLAG, r.X >= data);
+    r.set_status_register_flag(Registers::ZERO_FLAG, difference == 0);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, difference & 0x80);
 
     return 0;
 }
@@ -394,10 +404,13 @@ static uint8_t CPY(const Instruction& i, Registers& r, AddressBus& m)
     // Y - M
     // N    Z   C   I   D   V
     // +    +   +   -   -   -
+    uint8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : m.read(i.address());
 
-    r.set_status_register_flag(Registers::CARRY_FLAG, r.Y >= i.data());
-    r.set_status_register_flag(Registers::ZERO_FLAG, r.Y == i.data());
-    r.set_status_register_flag(Registers::NEGATIVE_FLAG, r.Y < i.data());
+    uint8_t difference = r.Y - data;
+
+    r.set_status_register_flag(Registers::CARRY_FLAG, r.Y >= data);
+    r.set_status_register_flag(Registers::ZERO_FLAG, difference == 0);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, difference & 0x80);
 
     return 0;
 }
@@ -599,6 +612,7 @@ static uint8_t LSR(const Instruction& i, Registers& r, AddressBus& m)
 
     r.set_status_register_flag(Registers::ZERO_FLAG, !data);
     r.set_status_register_flag(Registers::CARRY_FLAG, set_carry);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, false);
 
     if (i.addr_mode == AddressingMode::ACCUMULATOR)
     {
@@ -681,6 +695,7 @@ static uint8_t ROL(const Instruction& i, Registers& r, AddressBus& m)
 
     r.set_status_register_flag(Registers::ZERO_FLAG, !data);
     r.set_status_register_flag(Registers::CARRY_FLAG, set_carry);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, data & 0x80);
 
     if (i.addr_mode == AddressingMode::ACCUMULATOR)
     {
@@ -708,6 +723,7 @@ static uint8_t ROR(const Instruction& i, Registers& r, AddressBus& m)
 
     r.set_status_register_flag(Registers::ZERO_FLAG, !data);
     r.set_status_register_flag(Registers::CARRY_FLAG, set_carry);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, data & 0x80);
 
     if (i.addr_mode == AddressingMode::ACCUMULATOR)
     {
@@ -739,8 +755,6 @@ static uint8_t RTI(const Instruction& i, Registers& r, AddressBus& m)
     r.PC |= m.stack_pop(r.SP);
     r.PC |= m.stack_pop(r.SP) << 8;
  
-    r.set_status_register_flag(Registers::BREAK_FLAG, false);
-
     return 0;
 }
 
@@ -798,9 +812,14 @@ static uint8_t SBC(const Instruction& i, Registers& r, AddressBus& m)
     {
         int8_t carry = r.is_status_register_flag_set(Registers::CARRY_FLAG) ? 1 : 0;
         int8_t result = static_cast<uint8_t>(r.A) - static_cast<uint8_t>(data) - (1 - carry);
+        int16_t overflow_check = static_cast<int16_t>(static_cast<int8_t>(r.A)) - static_cast<int16_t>(static_cast<int8_t>(data)) - (1 - carry);
 
-        r.set_status_register_flag(Registers::CARRY_FLAG, static_cast<int16_t>(data + (1 - carry)) > r.A);
+        r.set_status_register_flag(Registers::CARRY_FLAG, ((static_cast<uint16_t>(data) & 0x00FF) + (1 - carry)) <= r.A);
         r.A = result & 0x00FF;
+
+        r.set_status_register_flag(Registers::NEGATIVE_FLAG, r.A & 0x80);
+        r.set_status_register_flag(Registers::ZERO_FLAG, r.A == 0);
+        r.set_status_register_flag(Registers::OVERFLOW_FLAG, result != overflow_check);
     }
 
     return extra_cycles_used;
@@ -1096,7 +1115,7 @@ static std::array INSTRUCTION_DETAILS = std::to_array<InstructionDetails>(
     { "STY oper",       0x8C,   3,      4,      AddressingMode::ABSOLUTE,           STY },
     { "TAX",            0xAA,   1,      2,      AddressingMode::IMPLIED,            TAX },
     { "TAY",            0xA8,   1,      2,      AddressingMode::IMPLIED,            TAY },
-    { "TXS",            0xBA,   1,      2,      AddressingMode::IMPLIED,            TSX },
+    { "TSX",            0xBA,   1,      2,      AddressingMode::IMPLIED,            TSX },
     { "TXA",            0x8A,   1,      2,      AddressingMode::IMPLIED,            TXA },
     { "TXS",            0x9A,   1,      2,      AddressingMode::IMPLIED,            TXS },
     { "TYA",            0x98,   1,      2,      AddressingMode::IMPLIED,            TYA },

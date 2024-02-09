@@ -252,17 +252,12 @@ uint8_t Processor6502::execute_instruction(const Instruction& i)
         //          << "0x0" << std::hex << std::uppercase << registers_.PC << "    "
         //        << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
     }
+    uint16_t previous_PC = registers_.PC - instr_table_[i.opcode()].bytes;
 
-    if constexpr (ENABLE_CPU_LOGGING)
-    {
-        log_ << cycle_count_ << "\t"
-             << "0x" << std::hex << std::uppercase << registers_.PC << "    "
-             << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
-    }
-    
     bool extra_cycles = instr_table_[i.opcode()].handler(i, registers_, address_bus_);
     instr_count_++;
 
+    update_execution_log(i, previous_PC);
     return extra_cycles + instr_table_[i.opcode()].cycles - instr_table_[i.opcode()].bytes;
 }
 
@@ -526,6 +521,67 @@ void Processor6502::print_history(const uint16_t num_instructions)
     for (int32_t i = 0;i < num_instructions; ++i)
     {
         std::cout << *(history_.end() - num_instructions + i) << std::endl;
+    }
+}
+
+void Processor6502::update_execution_log(const Instruction& i, uint16_t previous_pc)
+{
+    if constexpr (ENABLE_CPU_LOGGING)
+    {
+        // match log format of other emulators for comparisons
+        // E684  4C B3 EA  JMP $EAB3                       c14532915    i4977228     A:00 X:00 Y:20 P:27 SP:FC 
+
+        // PC
+        log_ << std::hex << std::uppercase
+             << std::setfill('0') << std::setw(4) << previous_pc << "  ";
+
+        // opcode + data
+        for (int32_t k = 0;k < instr_table_[i.opcode()].bytes;++k)
+        {
+            log_ << std::setw(2) << +i.values[k] << " ";
+        }
+        // space
+        for (int32_t k = 0;k < 10 - (instr_table_[i.opcode()].bytes * 3);++k)
+        {
+            log_ << " ";
+        }
+
+        // opcode text
+        log_ << std::string(instr_table_[i.opcode()].assembler).substr(0, 3) << " ";
+
+        // instruction param
+        if (instr_table_[i.opcode()].bytes == 2)
+        {
+            log_ << std::setw(4) << std::setfill(' ') << +i.data() << " " << std::setw(2) << std::setfill('0') << +address_bus_.read(i.data()) << " ";
+        }
+        else if (instr_table_[i.opcode()].bytes == 3)
+        {
+            log_ << std::setw(4) << std::setfill(' ') << +i.address() << " " << std::setw(2) << std::setfill('0') << +address_bus_.read(i.address()) << " ";
+        }
+        else
+        {
+            log_ << std::setw(4) << std::setfill(' ') << std::setw(8) << " ";
+        }
+
+        // counts
+        log_ << std::dec << "c" << std::setw(10) << std::setfill(' ') << std::left << cycle_count_ << std::right << "    ";
+        log_ << "i" << std::setw(10) << std::setfill(' ') << std::left << instr_count_ << std::right << "    ";
+
+        // registers
+        log_ << std::hex << std::uppercase
+             << "A:" << std::setw(2) << std::setfill('0') << +registers_.A << " "
+             << "X:" << std::setw(2) << std::setfill('0') << +registers_.X << " "
+             << "Y:" << std::setw(2) << std::setfill('0') << +registers_.Y << " "
+             << "P:"
+             << (registers_.is_status_register_flag_set(Registers::NEGATIVE_FLAG) ? "N" : "n")
+             << (registers_.is_status_register_flag_set(Registers::OVERFLOW_FLAG) ? "V" : "v")
+             << "U"
+             << (registers_.is_status_register_flag_set(Registers::BREAK_FLAG) ? "B" : "b")
+             << (registers_.is_status_register_flag_set(Registers::DECIMAL_FLAG) ? "D" : "d")
+             << (registers_.is_status_register_flag_set(Registers::INTERRUPT_DISABLE_FLAG) ? "I" : "i")
+             << (registers_.is_status_register_flag_set(Registers::ZERO_FLAG) ? "Z" : "z")
+             << (registers_.is_status_register_flag_set(Registers::CARRY_FLAG) ? "C" : "c") << " "
+             << "SP:" << std::uppercase << +registers_.SP << "\n";
     }
 }
 
