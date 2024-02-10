@@ -6,9 +6,12 @@
 ._*
 
 # build files
-bazel-*
+build/
 build-*/
 CMakeLists.txt.*
+
+# Local test files
+roms/
 
 # Prerequisites
 *.d

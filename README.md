@@ -1,15 +1,14 @@
-# Building
+# NES Emulator
 
-## with Bazel (headless)
+A hobby project to build an 8-bit Nintendo emulator in C++. It's not intended to be different or
+better than any of the other emulators out there. My goal is to get it functional enough to run
+The Legend of Zelda with a USB controller.
 
-bazel build --cxxopt='-std=c++20' //:app
-bazel run --cxxopt='-std=c++20' //:app /Users/jesse/code/nes/roms/donkey_kong.nes
+# Getting Started
 
-## Linux
+You'll need an installation of QT6 and then update the below instructions with your QT installation path.
 
-cmake --build /home/jesse/code/nes/linux/build-nes_qt-Desktop_Qt_6_6_1_GCC_64bit-Debug --target all
-./linux/build-nes_qt-Desktop_Qt_6_6_1_GCC_64bit-Debug/appnes_qt
-
-# Options
-
-Modify config/flags.hpp to adjust the display options (X11, headless, mac)
+* `mkdir build`
+* `cd build`
+* `cmake ../platform -DQt6_DIR=~/Qt/6.6.1/macos/lib/cmake/Qt6`
+* `make`
