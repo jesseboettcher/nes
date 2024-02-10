@@ -25,9 +25,10 @@ void write_pc_to_file(unsigned int pc)
     outFile.close();
 }
 
-Processor6502::Processor6502(AddressBus& address_bus, bool& nmi_signal)
+Processor6502::Processor6502(AddressBus& address_bus, bool& nmi_signal, int32_t internal_memory_size)
  : address_bus_(address_bus)
  , non_maskable_interrupt_(nmi_signal)
+ , internal_memory_size_(internal_memory_size)
 {
     std::cout << "Launching Processor6502...\n";
 
@@ -61,7 +62,8 @@ void Processor6502::reset()
     registers_.SP = 0xFF; // init stack pointer to the top of page 1
     registers_.set_SR(0);
 
-    print_status();
+    pending_operation_.reset();
+    cycles_to_wait_ = 0;
 }
 
 void Processor6502::run()
@@ -94,12 +96,6 @@ bool Processor6502::step()
     else
     {
         uint8_t next_instruction = address_bus_.read(registers_.PC++);
-
-        if (cycle_count_ == 265329)
-        {
-            print_memory(registers_.PC - 1, 64);
-        }
-        
         pending_operation_.values.push_back(next_instruction);
     }
     cycles_to_wait_ = 1;

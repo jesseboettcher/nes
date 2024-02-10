@@ -7,9 +7,9 @@ const uint8_t AddressBus::read(int32_t a) const
 {
     assert(a >= 0 && a < ADDRESSABLE_MEMORY_SIZE);
 
-    if (a < 0x2000) // CPU memory
+    if (a < cpu_->internal_memory_size()) // CPU memory
     {
-        return cpu_->read(a % 0x0800); // mirrored after 0x07FF up to 0x1FFF
+        return cpu_->read(a % cpu_->internal_memory_size()); // mirrored after 0x07FF up to 0x1FFF
     }
     else if (a <= 0x3FFF) // PPU registers, mirrored after 0x2000 - 0x2007
     {
@@ -48,9 +48,9 @@ uint8_t& AddressBus::write(int32_t a)
 {
     assert(a >= 0 && a < ADDRESSABLE_MEMORY_SIZE);
 
-    if (a < 0x2000) // CPU memory
+    if (a < cpu_->internal_memory_size()) // CPU memory
     {
-        return cpu_->write(a % 0x0800); // mirrored after 0x07FF up to 0x1FFF
+        return cpu_->write(a % cpu_->internal_memory_size()); // mirrored after 0x07FF up to 0x1FFF
     }
     else if (a <= 0x3FFF) // PPU registers, mirrored after 0x2000 - 0x2007
     {

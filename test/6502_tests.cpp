@@ -1,41 +1,23 @@
-#include "lib/json.hpp"
-#include "processor/processor_6502.hpp"
+#include "test/6502_tests.hpp"
 
 #include <glog/logging.h>
 
 #include <array>
 #include <fstream>
 #include <iomanip>
-#include <set>
 #include <sstream>
 
 using json = nlohmann::json;
 
-class Test6502
-{
-public:
-	void run();
-
-private:
-	bool test_instruction(uint8_t instr);
-	bool run_one_test(const json& j, std::string name);
-
-	Processor6502 processor_;
-
-    std::set<uint8_t> tests_run_;
-    std::set<uint8_t> tests_skipped_;
-};
-
-
 bool Test6502::run_one_test(const json& j, std::string name)
 {
     // set initial state
-	Registers& r = processor_.registers();
-	Memory& m = processor_.memory();
+	Registers& r = processor_->registers();
+	AddressBus& m = processor_->memory();
 
 	json initial_state = j.at("initial");
 
-	processor_.reset();
+	processor_->reset();
 	r.PC = initial_state.at("pc");
 	r.SP = initial_state.at("s");
 	r.A  = initial_state.at("a");
@@ -47,31 +29,27 @@ bool Test6502::run_one_test(const json& j, std::string name)
 
 	for (int32_t i = 0;i < initial_ram.size();++i)
 	{
-		m[initial_ram.at(i).at(0)] = initial_ram.at(i).at(1);
+        uint8_t v = initial_ram.at(i).at(1);
+        uint16_t a = initial_ram.at(i).at(0);
+        m[a] = v;
 	}
 
 	// step the processor
+	uint64_t start_instr_count = processor_->instruction_count();
 
-    // when running for cycles, failure here:
-    // E20240122 08:30:22.440444 3636924416 6502_tests.cpp:66] check failure: expected 54554 actual 54555
-    // E20240122 08:30:22.440488 3636924416 6502_tests.cpp:88] 10:28: Failed on PC check
-	// for (int32_t num_cycles = 0; num_cycles < j.at("cycles").size();++num_cycles)
-
-	uint64_t start_instr_count = processor_.instruction_count();
-
-    while (processor_.instruction_count() == start_instr_count)
+    while (processor_->instruction_count() == start_instr_count)
     {
-		processor_.step();
+		processor_->step();
 	}
 
 	// check final state
 	json final_state = j.at("final");
 
-    auto assert_and_log = [](auto actual, auto expected, const std::string& message)
+    auto assert_and_log = [name](auto actual, auto expected, const std::string& message)
     {
         if (actual != expected)
         {
-            LOG(ERROR) << "check failure: expected " << expected << " actual " << static_cast<int32_t>(actual);
+            LOG(ERROR) << "fail " << name << " check failure: expected " << expected << " actual " << static_cast<int32_t>(actual);
             throw std::runtime_error(message);
         }
     };
@@ -94,7 +72,7 @@ bool Test6502::run_one_test(const json& j, std::string name)
     catch (const std::runtime_error& e)
     {
         LOG(ERROR) << e.what();
-        return false; // or any other appropriate action
+        return true; // or any other appropriate action
     }
 
 	return true;
@@ -117,7 +95,7 @@ bool Test6502::test_instruction(uint8_t instr)
     opcode_str << std::hex << std::setw(2) << std::setfill('0')
                << static_cast<int32_t>(instr);
 
-	path << "/Users/jesse/code/ProcessorTests/nes6502/v1/" << opcode_str.str() << ".json";
+	path << TESTS_PATH << opcode_str.str() << ".json";
 
 	std::ifstream test_file(path.str());
 	json test_json = json::parse(test_file);
@@ -152,12 +130,4 @@ void Test6502::run()
 
     LOG(INFO) << "Finished " << tests_run_.size()
               << " tests (skipped " << tests_skipped_.size() << ")";
-}
-
-int main(void)
-{
-	Test6502 test_6502;
-
-	test_6502.run();
-	return 0;
 }

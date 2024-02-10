@@ -157,18 +157,23 @@ void create_menus()
     QAction *cmd_action = new QAction("Command...", ui.menu_bar);
     cmd_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_C));
 
+    QAction *tests_action = new QAction("Run Processor Tests", ui.menu_bar);
+
     debug_menu->addAction(run_action);
     debug_menu->addAction(step_action);
     debug_menu->addAction(stop_action);
     debug_menu->addSeparator();
     debug_menu->addAction(goto_mem_action);
     debug_menu->addAction(cmd_action);
+    debug_menu->addSeparator();
+    debug_menu->addAction(tests_action);
 
     QObject::connect(run_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::run);
     QObject::connect(step_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::step);
     QObject::connect(stop_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::stop);
     QObject::connect(goto_mem_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::goto_memory);
     QObject::connect(cmd_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::command);
+    QObject::connect(tests_action, &QAction::triggered, &ui.menu_handler, &MenuHandler::run_processor_tests);
 
     // Window menu
     QMenu *window_menu = ui.menu_bar->addMenu("Window");

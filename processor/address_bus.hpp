@@ -24,7 +24,7 @@ public:
         WRITE,
     };
 
-    static const int32_t ADDRESSABLE_MEMORY_SIZE = 64 * 1024;
+    static constexpr int32_t ADDRESSABLE_MEMORY_SIZE = 64 * 1024;
 
     using AccessNotifier = std::function<void()>;
     using PeripheralRead = std::function<uint8_t()>;

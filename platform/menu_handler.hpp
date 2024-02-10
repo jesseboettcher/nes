@@ -21,6 +21,7 @@ public slots:
 
     void goto_memory();
     void command();
+    void run_processor_tests();
 
     void close();
     void show_registers();

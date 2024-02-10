@@ -3,6 +3,7 @@
 #include "io/cartridge.hpp"
 #include "io/prompt.hpp"
 #include "platform/ui_context.hpp"
+#include "test/6502_tests.hpp"
 
 #include <QDebug>
 #include <QFileDialog>
@@ -120,6 +121,13 @@ void MenuHandler::command()
         Qt::WindowFlags()        // Window flags
     );
     CommandPrompt::instance().write_command(text.toStdString());
+}
+
+void MenuHandler::run_processor_tests()
+{
+    Test6502 test_6502;
+
+    test_6502.run();
 }
 
 void MenuHandler::show_registers()

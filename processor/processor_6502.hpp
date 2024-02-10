@@ -144,9 +144,12 @@ struct InstructionDetails
 class Processor6502
 {
 public:
-	using CPUMemory = std::array<uint8_t, 2 * 1024>; // 2kb ram
+	// Nes 6502 has 2kb of internal RAM, this array larger to support Test6502 unit tests
+	using CPUMemory = std::array<uint8_t, AddressBus::ADDRESSABLE_MEMORY_SIZE>;
+	static constexpr int32_t INTERNAL_MEMORY_SIZE = 2 * 1024;
 
-	Processor6502(AddressBus& address_bus, bool& nmi_signal);
+	Processor6502(AddressBus& address_bus, bool& nmi_signal,
+				  int32_t internal_memory_size = INTERNAL_MEMORY_SIZE);
 	~Processor6502();
 
 	// Reset registers and initialize PC to values specified by reset vector
@@ -207,6 +210,7 @@ protected:
 
 	// internal memory accessors
 	friend class AddressBus;
+	int32_t internal_memory_size() const { return internal_memory_size_; }
 	uint8_t read(uint16_t a) const;
 	uint8_t& write(uint16_t a);
 
@@ -233,9 +237,11 @@ private:
 	int32_t cycles_to_wait_{0};
 
 	AddressBus& address_bus_;
-    CPUMemory internal_memory_;
 	Registers registers_{};
 	bool& non_maskable_interrupt_;
+
+    CPUMemory internal_memory_;
+    int32_t internal_memory_size_;
 
     // Needs fast lookups
     std::array<InstructionDetails, 0xFF> instr_table_;
