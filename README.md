@@ -13,6 +13,16 @@ You'll need an installation of QT6 and then update the below instructions with y
 * `cmake ../platform -DQt6_DIR=~/Qt/6.6.1/macos/lib/cmake/Qt6`
 * `make`
 
+# Milestones
+
+- [x] Pass processor validation tests
+- [x] Boot Ice Hockey and Donkey Kong to main menu (ppu background tiles)
+- [x] Donkey Kong playable (ppu sprites)
+- [ ] Ice Hockey Playable (ppu scrolling)
+- [ ] Sound
+- [ ] Load Zelda (cartridge mapper 1)
+- [ ] USB controllers
+
 # Resources
 
 ### References
