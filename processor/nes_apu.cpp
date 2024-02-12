@@ -188,11 +188,12 @@ float NesAPU::get_duty(uint8_t r)
             return 0.125;
         case 1:
             return 0.25;
-        case 3:
+        case 2:
             return 0.5;
-        case 4:
+        case 3:
             return -0.25;
     }
+    assert(false);
     return 0;
 }
 

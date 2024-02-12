@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+static constexpr bool VERBOSE = false;
+
 // sample generators for square, sin, triangle waves
 std::vector<uint8_t> square_wav(const QAudioFormat &format, qint64 duration_us, int frequency)
 {
@@ -147,6 +149,12 @@ qint64 Generator::readData(char *data, qint64 max_len)
     static constexpr int32_t SAMPLE_SIZE_BYTES = 2;
     qint64 total = 0;
 
+    static constexpr int32_t MAX_READ = 1024;
+    if (max_len > MAX_READ)
+    {
+        max_len = MAX_READ;
+    }
+
     while (max_len - total > SAMPLE_SIZE_BYTES)
     {
         // Linear approximation of APU mixer
@@ -252,12 +260,17 @@ int16_t AudioStream::read_sample()
     {
         log_ << volume_adjusted << std::endl;
     }
-    return int16_t(result * (volume_ / 15.0));
+    return volume_adjusted;
 }
 
 void AudioStream::set_enabled(bool enabled)
 {
     enabled_ = enabled;
+
+    if (VERBOSE)
+    {
+        LOG(INFO) << magic_enum::enum_name<Audio::Channel>(channel_) << " set_enabled " << +enabled << " counter " << counter_ << " vol " << volume_;
+    }
 
     if (!enabled_)
     {
@@ -272,6 +285,11 @@ void AudioStream::decrement_volume_envelope()
         return;
     }
     volume_ -= volume_offset_;
+
+    if (volume_ < 0)
+    {
+        volume_ = 0;
+    }
 }
 
 void AudioStream::decrement_counter()
@@ -284,7 +302,7 @@ void AudioStream::decrement_counter()
 
     if (!counter_)
     {
-        enabled_ = false;
+        set_enabled(false);
     }
 }
 
@@ -301,5 +319,5 @@ void AudioStream::reload(Audio::Parameters params, std::vector<uint8_t> buffer)
     volume_ = constant_volume_ ? params.volume : 15;
     volume_offset_ = constant_volume_ ? 0 : params.volume;
 
-    enabled_ = true;
+    set_enabled(true);
 }
