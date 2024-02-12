@@ -1,5 +1,7 @@
 #include "platform/audio_output.hpp"
 
+#include "config/flags.hpp"
+
 #include <glog/logging.h>
 
 #include <algorithm>
@@ -116,11 +118,11 @@ Generator::Generator(const QAudioFormat &format)
 
     if (format.isValid())
     {
-        streams_.push_back(AudioStream()); // Square_Pulse_1
-        streams_.push_back(AudioStream()); // Square_Pulse_2
-        streams_.push_back(AudioStream()); // Triangle
-        streams_.push_back(AudioStream()); // Noise
-        streams_.push_back(AudioStream()); // Recorded_Sample
+        streams_.push_back(AudioStream(Audio::Channel::Square_Pulse_1));
+        streams_.push_back(AudioStream(Audio::Channel::Square_Pulse_2));
+        streams_.push_back(AudioStream(Audio::Channel::Triangle));
+        streams_.push_back(AudioStream(Audio::Channel::Noise));
+        streams_.push_back(AudioStream(Audio::Channel::Recorded_Sample));
     }
 }
 
@@ -194,20 +196,36 @@ void Generator::update_parameters(Audio::Channel channel, Audio::Parameters para
     streams_[to_index(channel)].reload(params, buffer);
 }
 
-AudioStream::AudioStream()
+AudioStream::AudioStream(Audio::Channel channel)
+ : channel_(channel)
 {
     // enough samples to feed zeros
     buffer_.push_back(0x00);
     buffer_.push_back(0x00);
 
     assert(buffer_.size() >= 2);
+
+    if constexpr (ENABLE_APU_LOGGING)
+    {
+        std::string path = std::string("/tmp/") +
+                           std::string(magic_enum::enum_name<Audio::Channel>(channel_)) +
+                           std::string(".log");
+        std::filesystem::remove(path);
+        log_.open(path);
+        if (!log_.is_open())
+        {
+            LOG(WARNING) << "Could not write " << path;
+        }
+    }
 }
 
 AudioStream::AudioStream(AudioStream&& other)
- : counter_(other.counter_)
+ : channel_(other.channel_)
+ , counter_(other.counter_)
  , volume_(other.volume_)
  , pos_(other.pos_)
  , buffer_(std::move(other.buffer_))
+ , log_(std::move(other.log_))
 {
     enabled_ = other.enabled_.load();
 }
@@ -216,12 +234,22 @@ int16_t AudioStream::read_sample()
 {
     if (!enabled_)
     {
+        if constexpr (ENABLE_APU_LOGGING)
+        {
+            log_ << '-' << std::endl;
+        }
         return 0;
     }
 
     int16_t result = *reinterpret_cast<int16_t*>(&buffer_[pos_]);
     pos_ = (pos_ + 2) % buffer_.size();
 
+    int16_t volume_adjusted = int16_t(result * (volume_ / 15.0));
+
+    if constexpr (ENABLE_APU_LOGGING)
+    {
+        log_ << volume_adjusted << std::endl;
+    }
     return int16_t(result * (volume_ / 15.0));
 }
 

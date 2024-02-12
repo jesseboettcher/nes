@@ -6,6 +6,7 @@
 #include <QAudioDevice>
 #include <QIODevice>
 
+#include <fstream>
 #include <mutex>
 
 // sample generators for square, sin, triangle waves
@@ -19,7 +20,7 @@ std::vector<uint8_t> triangle_wav(const QAudioFormat &format, qint64 duration_us
 class AudioStream
 {
 public:
-    AudioStream();
+    AudioStream(Audio::Channel channel);
     AudioStream(AudioStream&& other);
 
     int16_t read_sample();
@@ -35,12 +36,15 @@ public:
     int32_t volume() { return volume_; }
 
 private:
+    Audio::Channel channel_;
     int32_t counter_;    // countdown ticks
     int32_t volume_{15}; // 0-15
 
     int64_t pos_ = 0;
     std::vector<uint8_t> buffer_;
     std::atomic<bool> enabled_{false};
+
+    std::ofstream log_;
 };
 
 // Generator does the work of pushing sound samples out through QT's audio system.

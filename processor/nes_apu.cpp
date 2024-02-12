@@ -84,9 +84,6 @@ void NesAPU::step(uint64_t clock_ticks)
             }
         }
 
-
-        // update envelope, linear
-
         // handle register updates
         // Square_Pulse_1
         if (registers_.had_write(PULSE1_REG1))
@@ -97,11 +94,11 @@ void NesAPU::step(uint64_t clock_ticks)
         }
         if (registers_.had_write(PULSE1_REG2))
         {
-
+            // todo sweep unit
         }
         if (registers_.had_write(PULSE1_REG3))
         {
-
+            // counter low 8 bits, updated when the hi 3 bits are written via register 4
         }
         if (registers_.had_write(PULSE1_REG4))
         {
@@ -124,11 +121,11 @@ void NesAPU::step(uint64_t clock_ticks)
         }
         if (registers_.had_write(PULSE2_REG2))
         {
-
+            // todo sweep unit
         }
         if (registers_.had_write(PULSE2_REG3))
         {
-
+            // counter low 8 bits, updated when the hi 3 bits are written via register 4
         }
         if (registers_.had_write(PULSE2_REG4))
         {
@@ -139,7 +136,7 @@ void NesAPU::step(uint64_t clock_ticks)
                                 length_counter_lookup(get_length_counter(registers_[PULSE2_REG4]));
 
             player_.update_parameters(Audio::Channel::Square_Pulse_2,
-                                      params_[to_index(Audio::Channel::Square_Pulse_1)]);
+                                      params_[to_index(Audio::Channel::Square_Pulse_2)]);
         }
 
         if (registers_.had_write(APU_STATUS))
