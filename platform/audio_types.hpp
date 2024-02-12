@@ -18,6 +18,7 @@ struct Parameters
 {
     int32_t counter; // countdown ticks
     int32_t frequency;
+    int32_t volume;
     float duty_cycle; // square waves only
     bool loop;
     // todo envelope, volume, sweep

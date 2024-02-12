@@ -20,7 +20,9 @@ public:
 
     void update_parameters(Audio::Channel channel, Audio::Parameters params);
     void set_enabled(Audio::Channel channel, bool enabled);
+
     void decrement_counter(Audio::Channel channel);
+    void decrement_volume_envelope(Audio::Channel channel);
 
     void test();
 

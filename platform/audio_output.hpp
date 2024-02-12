@@ -28,11 +28,16 @@ public:
     bool enabled() { return enabled_; }
     void set_enabled(bool enabled);
     void decrement_counter();
+    void decrement_volume_envelope();
 
     void reload(Audio::Parameters params, std::vector<uint8_t> buffer);
 
+    int32_t volume() { return volume_; }
+
 private:
-    int32_t counter_; // countdown ticks
+    int32_t counter_;    // countdown ticks
+    int32_t volume_{15}; // 0-15
+
     int64_t pos_ = 0;
     std::vector<uint8_t> buffer_;
     std::atomic<bool> enabled_{false};
@@ -70,6 +75,9 @@ public:
 
     // Called on APU frame steps. Stream will self-disable when it reaches zero
     void decrement_counter(Audio::Channel channel) { streams_[magic_enum::enum_integer<Audio::Channel>(channel)].decrement_counter(); }
+
+    // Called on APU frame steps
+    void decrement_volume_envelope(Audio::Channel channel) { streams_[magic_enum::enum_integer<Audio::Channel>(channel)].decrement_volume_envelope(); }
 
     // Updates stream to a new configuration (e.g. frequency, volume envelope, counter, etc)
     void update_parameters(Audio::Channel channel, Audio::Parameters params, std::vector<uint8_t> buffer);

@@ -58,6 +58,7 @@ void NesAPU::step(uint64_t clock_ticks)
 
         int32_t local_step = frame_counter_steps_ % steps_per_frame;
 
+        // Decrement counters
         if (local_step == 1 ||
             (local_step == 3 && steps_per_frame == 4) ||
             (local_step == 4 && steps_per_frame == 5))
@@ -70,6 +71,20 @@ void NesAPU::step(uint64_t clock_ticks)
             player_.decrement_counter(Audio::Channel::Noise);
         }
 
+        // Decrement volume envelopes
+        if (steps_per_frame == 4 || (steps_per_frame == 5 && local_step != 3))
+        {
+            if (!get_constant_volume(registers_[PULSE1_REG1]))
+            {
+                player_.decrement_volume_envelope(Audio::Channel::Square_Pulse_1);
+            }
+            if (!get_constant_volume(registers_[PULSE2_REG1]))
+            {
+                player_.decrement_volume_envelope(Audio::Channel::Square_Pulse_2);
+            }
+        }
+
+
         // update envelope, linear
 
         // handle register updates
@@ -78,6 +93,7 @@ void NesAPU::step(uint64_t clock_ticks)
         {
             params_[to_index(Audio::Channel::Square_Pulse_1)].loop = get_loop(registers_[PULSE1_REG1]);
             params_[to_index(Audio::Channel::Square_Pulse_1)].duty_cycle = get_duty(registers_[PULSE1_REG1]);
+            params_[to_index(Audio::Channel::Square_Pulse_1)].volume = get_volume_envelope(registers_[PULSE1_REG1]);
         }
         if (registers_.had_write(PULSE1_REG2))
         {
@@ -104,6 +120,7 @@ void NesAPU::step(uint64_t clock_ticks)
         {
             params_[to_index(Audio::Channel::Square_Pulse_2)].loop = get_loop(registers_[PULSE2_REG1]);
             params_[to_index(Audio::Channel::Square_Pulse_2)].duty_cycle = get_duty(registers_[PULSE2_REG1]);
+            params_[to_index(Audio::Channel::Square_Pulse_2)].volume = get_volume_envelope(registers_[PULSE2_REG1]);
         }
         if (registers_.had_write(PULSE2_REG2))
         {

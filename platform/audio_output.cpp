@@ -1,5 +1,7 @@
 #include "platform/audio_output.hpp"
 
+#include <glog/logging.h>
+
 #include <algorithm>
 
 // sample generators for square, sin, triangle waves
@@ -17,7 +19,7 @@ std::vector<uint8_t> square_wav(const QAudioFormat &format, qint64 duration_us, 
 
     while (length)
     {
-        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.2);
+        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.8);
 
         double x = std::sin(2 * M_PI * frequency * double(sample_index++ % format.sampleRate())
                                  / format.sampleRate());
@@ -52,7 +54,7 @@ std::vector<uint8_t> sin_wav(const QAudioFormat &format, qint64 duration_us, int
 
     while (length)
     {
-        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.2);
+        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.8);
 
         double x = std::sin(2 * M_PI * frequency * double(sample_index++ % format.sampleRate())
                                  / format.sampleRate());
@@ -90,7 +92,7 @@ std::vector<uint8_t> triangle_wav(const QAudioFormat &format, qint64 duration_us
 
     while (length)
     {
-        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.4);
+        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.8);
 
         int32_t triangle_step = (sample_index++ / samples_per_triangle_step) % max_triangle_steps;
         if (triangle_step >= max_triangle_steps / 2)
@@ -209,7 +211,7 @@ int16_t AudioStream::read_sample()
     int16_t result = *reinterpret_cast<int16_t*>(&buffer_[pos_]);
     pos_ = (pos_ + 2) % buffer_.size();
 
-    return result;
+    return int16_t(result * (volume_ / 15.0));
 }
 
 void AudioStream::set_enabled(bool enabled)
@@ -220,6 +222,15 @@ void AudioStream::set_enabled(bool enabled)
     {
         counter_ = 0;
     }
+}
+
+void AudioStream::decrement_volume_envelope()
+{
+    if (!volume_)
+    {
+        return;
+    }
+    volume_--;
 }
 
 void AudioStream::decrement_counter()
@@ -243,5 +254,6 @@ void AudioStream::reload(Audio::Parameters params, std::vector<uint8_t> buffer)
     buffer_ = buffer;
     pos_ = 0;
     counter_ = params.counter;
+    volume_ = params.volume;
     enabled_ = true;
 }
