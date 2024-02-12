@@ -43,6 +43,8 @@ public:
     NesDisplay& display() { return display_; }
 
     void shutdown() { user_interrupt(); }
+
+    void sound_test() { apu_->test(); }
     
 protected:
 	friend class CommandPrompt;

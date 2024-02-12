@@ -7,12 +7,14 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Quick)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Multimedia)
 
 qt_standard_project_setup()
 qt_policy(SET QTP0001 OLD)
 
 qt_add_executable(appnes_qt
     main.cpp view_update_relay.hpp menu_handler.hpp menu_handler.cpp ui_controller.hpp ui_properties.cpp ui_window.hpp ui_context.cpp ui_context.hpp sprites_model.cpp sprites_model.hpp
+    audio_player.hpp audio_player.cpp audio_output.hpp audio_output.cpp
 )
 
 target_include_directories(appnes_qt
@@ -51,6 +53,7 @@ set_target_properties(appnes_qt PROPERTIES
 
 target_link_libraries(appnes_qt
     PRIVATE Qt6::Quick Qt6::Widgets
+    PRIVATE Qt6::Quick Qt6::Multimedia
 )
 
 include(GNUInstallDirs)
