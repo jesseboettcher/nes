@@ -20,7 +20,7 @@ class AudioStream
 {
 public:
     AudioStream();
-    AudioStream(AudioStream&& other) {}
+    AudioStream(AudioStream&& other);
 
     int16_t read_sample();
     qint64 size() const { return buffer_.size(); }

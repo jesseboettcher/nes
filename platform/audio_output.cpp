@@ -199,6 +199,17 @@ AudioStream::AudioStream()
     // enough samples to feed zeros
     buffer_.push_back(0x00);
     buffer_.push_back(0x00);
+
+    assert(buffer_.size() >= 2);
+}
+
+AudioStream::AudioStream(AudioStream&& other)
+ : counter_(other.counter_)
+ , volume_(other.volume_)
+ , pos_(other.pos_)
+ , buffer_(std::move(other.buffer_))
+{
+    enabled_ = other.enabled_.load();
 }
 
 int16_t AudioStream::read_sample()
