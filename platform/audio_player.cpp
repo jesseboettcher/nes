@@ -24,6 +24,7 @@ void AudioPlayer::update_parameters(Audio::Channel channel, Audio::Parameters pa
               << "freq " << params.frequency << " "
               << "duty " << params.duty_cycle << " "
               << "volume " << params.volume << " "
+              << "constant vol " << +params.constant_volume << " "
               << "counter " << params.counter << " "
               << "loop " << +params.loop;
 

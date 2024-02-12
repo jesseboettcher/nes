@@ -39,6 +39,8 @@ private:
     Audio::Channel channel_;
     int32_t counter_;    // countdown ticks
     int32_t volume_{15}; // 0-15
+    int32_t volume_offset_; // for changing envelope
+    bool constant_volume_;
 
     int64_t pos_ = 0;
     std::vector<uint8_t> buffer_;

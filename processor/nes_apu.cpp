@@ -90,6 +90,7 @@ void NesAPU::step(uint64_t clock_ticks)
         {
             params_[to_index(Audio::Channel::Square_Pulse_1)].loop = get_loop(registers_[PULSE1_REG1]);
             params_[to_index(Audio::Channel::Square_Pulse_1)].duty_cycle = get_duty(registers_[PULSE1_REG1]);
+            params_[to_index(Audio::Channel::Square_Pulse_1)].constant_volume = get_constant_volume(registers_[PULSE1_REG1]);
             params_[to_index(Audio::Channel::Square_Pulse_1)].volume = get_volume_envelope(registers_[PULSE1_REG1]);
         }
         if (registers_.had_write(PULSE1_REG2))
@@ -117,6 +118,7 @@ void NesAPU::step(uint64_t clock_ticks)
         {
             params_[to_index(Audio::Channel::Square_Pulse_2)].loop = get_loop(registers_[PULSE2_REG1]);
             params_[to_index(Audio::Channel::Square_Pulse_2)].duty_cycle = get_duty(registers_[PULSE2_REG1]);
+            params_[to_index(Audio::Channel::Square_Pulse_2)].constant_volume = get_constant_volume(registers_[PULSE2_REG1]);
             params_[to_index(Audio::Channel::Square_Pulse_2)].volume = get_volume_envelope(registers_[PULSE2_REG1]);
         }
         if (registers_.had_write(PULSE2_REG2))
@@ -139,6 +141,7 @@ void NesAPU::step(uint64_t clock_ticks)
                                       params_[to_index(Audio::Channel::Square_Pulse_2)]);
         }
 
+        // Status register for channel enable/disable
         if (registers_.had_write(APU_STATUS))
         {
             player_.set_enabled(Audio::Channel::Square_Pulse_1, registers_[APU_STATUS] & APU_STATUS_PULSE1_ENABLE);

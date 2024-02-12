@@ -223,6 +223,8 @@ AudioStream::AudioStream(AudioStream&& other)
  : channel_(other.channel_)
  , counter_(other.counter_)
  , volume_(other.volume_)
+ , volume_offset_(other.volume_offset_)
+ , constant_volume_(other.constant_volume_)
  , pos_(other.pos_)
  , buffer_(std::move(other.buffer_))
  , log_(std::move(other.log_))
@@ -269,7 +271,7 @@ void AudioStream::decrement_volume_envelope()
     {
         return;
     }
-    volume_--;
+    volume_ -= volume_offset_;
 }
 
 void AudioStream::decrement_counter()
@@ -293,6 +295,11 @@ void AudioStream::reload(Audio::Parameters params, std::vector<uint8_t> buffer)
     buffer_ = buffer;
     pos_ = 0;
     counter_ = params.counter;
-    volume_ = params.volume;
+
+    // params.volume contains the volume, if constant, otherwise the offset for the envelope
+    constant_volume_ = params.constant_volume;
+    volume_ = constant_volume_ ? params.volume : 15;
+    volume_offset_ = constant_volume_ ? 0 : params.volume;
+
     enabled_ = true;
 }
