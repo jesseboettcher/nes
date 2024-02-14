@@ -3,120 +3,132 @@
 #include "config/flags.hpp"
 
 #include <glog/logging.h>
+#include <QAudioDevice>
+#include <QMediaDevices>
 
 #include <algorithm>
 
 static constexpr bool VERBOSE = false;
 
-// sample generators for square, sin, triangle waves
-std::vector<uint8_t> square_wav(const QAudioFormat &format, qint64 duration_us, int frequency)
+class Waveform
 {
-    const int channel_bytes = format.bytesPerSample();
-    const int sample_bytes = format.channelCount() * channel_bytes;
-    qint64 length = format.bytesForDuration(duration_us);
+public:
+    virtual void set_frequency(int32_t frequency, float duty, bool reset_phase) { }
+    virtual int16_t read_sample() { return 0; }
+};
 
-    std::vector<uint8_t> buffer;
-    buffer.resize(length);
-
-    uint8_t *ptr = reinterpret_cast<uint8_t *>(buffer.data());
-    int32_t sample_index = 0;
-
-    while (length)
+class SquareWave : public Waveform
+{
+public:
+    SquareWave(const QAudioFormat &format, int32_t frequency, float duty)
+     : format_(format)
     {
-        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.8);
+        max_value_ = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 1);
 
-        double x = std::sin(2 * M_PI * frequency * double(sample_index++ % format.sampleRate())
-                                 / format.sampleRate());
-        if (x < 0)
-        {
-            x = -max_volume;
-        }
-        else if (x > 0)
-        {
-            x = max_volume;
-        }
-
-        *reinterpret_cast<int16_t *>(ptr) = x;
-
-        ptr += channel_bytes;
-        length -= channel_bytes;
+        set_frequency(frequency, duty, true);
     }
-    return buffer;
-}
 
-std::vector<uint8_t> sin_wav(const QAudioFormat &format, qint64 duration_us, int frequency)
-{
-    const int channel_bytes = format.bytesPerSample();
-    const int sample_bytes = format.channelCount() * channel_bytes;
-    qint64 length = format.bytesForDuration(duration_us);
-
-    std::vector<uint8_t> buffer;
-    buffer.resize(length);
-
-    uint8_t *ptr = reinterpret_cast<uint8_t *>(buffer.data());
-    int32_t sample_index = 0;
-
-    while (length)
+    void set_frequency(int32_t frequency, float duty, bool reset_phase) override
     {
-        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.8);
-
-        double x = std::sin(2 * M_PI * frequency * double(sample_index++ % format.sampleRate())
-                                 / format.sampleRate());
-
-        *reinterpret_cast<qint16 *>(ptr) = static_cast<qint16>(x * max_volume);
-
-        ptr += channel_bytes;
-        length -= channel_bytes;
-    }
-    return buffer;
-}
-
-std::vector<uint8_t> triangle_wav(const QAudioFormat &format, qint64 duration_us, int frequency)
-{
-    int32_t max_triangle_steps = 64;
-    int32_t samples_per_triangle_step = 1000000 / frequency * 2 / max_triangle_steps;
-    int32_t samples_per_period = max_triangle_steps * samples_per_triangle_step;
-    int32_t triangle_step = max_triangle_steps - 1;
-
-    const int channel_bytes = format.bytesPerSample();
-    const int sample_bytes = format.channelCount() * channel_bytes;
-    qint64 length = format.bytesForDuration(duration_us);
-
-    // make sure the buffer length exactly matches the triangle period so
-    // looping is seamless
-    length -= length % (samples_per_period * sample_bytes);
-
-    std::vector<uint8_t> buffer;
-    buffer.resize(length);
-
-    uint8_t *ptr = reinterpret_cast<uint8_t *>(buffer.data());
-    int32_t sample_index = 0;
-
-    int32_t last_log = 999;
-
-    while (length)
-    {
-        const int16_t max_volume = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 0.8);
-
-        int32_t triangle_step = (sample_index++ / samples_per_triangle_step) % max_triangle_steps;
-        if (triangle_step >= max_triangle_steps / 2)
+        if (reset_phase)
         {
-            triangle_step = max_triangle_steps / 2 - (triangle_step - max_triangle_steps / 2);
+            sample_number_ = 0;
+        }
+        frequency_ = frequency;
+        duty_ = duty;
+        sample_number_ = 0;
+
+        int32_t usec_per_period = 1000000 / (frequency_ * 2);
+
+        samples_per_period_ = format_.bytesForDuration(usec_per_period) / format_.bytesPerSample();
+
+        samples_hi_per_period_ = samples_per_period_ * std::abs(duty_);
+    }
+
+    int16_t read_sample() override
+    {
+        int32_t sample = max_value_;
+
+        if ((sample_number_++ % samples_per_period_) > samples_hi_per_period_)
+        {
+            sample *= -1;
         }
 
-        double x = -1 + 2 * (static_cast<double>(triangle_step) / (max_triangle_steps / 2));
-        int16_t sample = x * max_volume;
+        if (duty_ < 0)
+        {
+            sample *= -1;
+        }
 
-        *reinterpret_cast<qint16 *>(ptr) = static_cast<qint16>(sample);
-        ptr += channel_bytes;
-        length -= channel_bytes;
+        return sample;
     }
-    return buffer;
-}
+
+private:
+    QAudioFormat format_;
+
+    int16_t max_value_{0};
+
+    int64_t sample_number_{0};
+    int32_t frequency_{0};
+    int32_t samples_per_period_{0};
+    int32_t samples_hi_per_period_{0};
+    float duty_{0.0};
+};
+
+class TriangleWave : public Waveform
+{
+public:
+    static constexpr int32_t MAX_TRIANGLE_STEPS = 64;
+
+    TriangleWave(const QAudioFormat &format, int32_t frequency)
+     : format_(format)
+    {
+        max_value_ = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * .8);
+
+        set_frequency(frequency, 0, false);
+    }
+
+    void set_frequency(int32_t frequency, float, bool) override
+    {
+        frequency_ = frequency;
+
+        int32_t usec_per_period = 1000000 / (frequency_ * 2);
+        samples_per_period_ = format_.bytesForDuration(usec_per_period) / format_.bytesPerSample();
+
+        samples_per_triangle_step_ = samples_per_period_ / MAX_TRIANGLE_STEPS;
+    }
+
+    int16_t read_sample() override
+    {
+        int32_t current_triangle_step = (sample_number_++ / samples_per_triangle_step_) % MAX_TRIANGLE_STEPS;
+        if (current_triangle_step >= MAX_TRIANGLE_STEPS / 2)
+        {
+            current_triangle_step = MAX_TRIANGLE_STEPS / 2 - (current_triangle_step - MAX_TRIANGLE_STEPS / 2);
+        }
+
+        double normalized_sample = -1 + 2 * (static_cast<double>(current_triangle_step) / (MAX_TRIANGLE_STEPS / 2));
+        int16_t result_sample = normalized_sample * max_value_;
+
+        return result_sample;
+    }
+
+private:
+    QAudioFormat format_;
+
+    int16_t max_value_{0};
+
+    int64_t sample_number_{0};
+    int32_t frequency_{-1};
+    int32_t samples_per_period_{0};
+    int32_t samples_per_triangle_step_;
+};
 
 Generator::Generator(const QAudioFormat &format)
+ : sema_(0)
+ , output_buffer_(1024*32)
 {
     assert(QAudioFormat::Int16 == format.sampleFormat());
+
+    samples_per_step_ = format.bytesForDuration(16666) * format.bytesPerSample(); // stepped at 60hz, 16.6ms
 
     if (format.isValid())
     {
@@ -126,6 +138,13 @@ Generator::Generator(const QAudioFormat &format)
         streams_.push_back(AudioStream(Audio::Channel::Noise));
         streams_.push_back(AudioStream(Audio::Channel::Recorded_Sample));
     }
+
+    // populate each stream with a valid waveform. will not produce actual audio samples until enabled
+    streams_[to_index(Audio::Channel::Square_Pulse_1)].set_waveform(std::make_shared<SquareWave>(format, 440, 0.5));
+    streams_[to_index(Audio::Channel::Square_Pulse_2)].set_waveform(std::make_shared<SquareWave>(format, 440, 0.5));
+    streams_[to_index(Audio::Channel::Triangle)].set_waveform(std::make_shared<TriangleWave>(format, 440));
+
+    producer_ = std::make_shared<std::thread>(&Generator::producer_loop, this);
 }
 
 void Generator::start()
@@ -138,24 +157,74 @@ void Generator::stop()
     close();
 }
 
-qint64 Generator::readData(char *data, qint64 max_len)
+void Generator::producer_loop()
 {
-    // Mix the streams together to produce single set of output samples
-
-    // This function is being called from a QT audio thread. Take the generator lock to make sure
-    // the streams_ buffers are not manipulated while reading.
-    std::scoped_lock lock(lock_);
-
-    static constexpr int32_t SAMPLE_SIZE_BYTES = 2;
-    qint64 total = 0;
-
-    static constexpr int32_t MAX_READ = 1024;
-    if (max_len > MAX_READ)
+    while (true)
     {
-        max_len = MAX_READ;
-    }
+        bool success = sema_.try_acquire_for(std::chrono::milliseconds(1000));
 
-    while (max_len - total > SAMPLE_SIZE_BYTES)
+        if (success)
+        {
+            std::scoped_lock lock(lock_);
+
+            if (events_.empty())
+            {
+                continue;
+            }
+
+            EventChannel event = events_.front();
+            events_.pop();
+
+            switch (event.first)
+            {
+                case Event::Step:
+                {
+                    produce_samples();
+                }
+                break;
+
+                case Event::Parameter_Update:
+                case Event::Parameter_Update_Reset_Phase:
+                {
+                    Audio::Parameters params = param_updates_.front();
+                    param_updates_.pop();
+
+                    QAudioDevice device = QMediaDevices::defaultAudioOutput();
+                    QAudioFormat format = device.preferredFormat();
+
+                    if (params.channel == Audio::Channel::Square_Pulse_1 ||
+                        params.channel == Audio::Channel::Square_Pulse_2)
+                    {
+                        streams_[to_index(params.channel)].reload(params, event.first == Event::Parameter_Update_Reset_Phase);
+                    }
+                    else if (params.channel == Audio::Channel::Triangle)
+                    {
+                        streams_[to_index(params.channel)].reload(params, false);
+                    }
+                    break;
+                }
+
+                case Event::Decrement_Counter:
+                {
+                    streams_[to_index(event.second)].decrement_counter();
+                    break;
+                }
+
+                case Event::Decrement_Volume:
+                {
+                    streams_[to_index(event.second)].decrement_volume_envelope();
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void Generator::produce_samples()
+{
+    int32_t samples_produced = 0;
+
+    while (samples_produced++ < samples_per_step_)
     {
         // Linear approximation of APU mixer
         // https://www.nesdev.org/wiki/APU_Mixer
@@ -166,11 +235,11 @@ qint64 Generator::readData(char *data, qint64 max_len)
 
         mixed_square_pulses += streams_[to_index(Audio::Channel::Square_Pulse_1)].read_sample();
         mixed_square_pulses += streams_[to_index(Audio::Channel::Square_Pulse_2)].read_sample();
-        mixed_square_pulses *= 0.0752; // adjusted these x10, same ratio but so they do not mute the audio
+        mixed_square_pulses *= 0.00752;
 
-        mixed_tnd += 0.0851 * streams_[to_index(Audio::Channel::Triangle)].read_sample();
-        mixed_tnd += 0.0494 * streams_[to_index(Audio::Channel::Noise)].read_sample();
-        mixed_tnd += 0.0335 * streams_[to_index(Audio::Channel::Recorded_Sample)].read_sample();
+        mixed_tnd += 0.00851 * streams_[to_index(Audio::Channel::Triangle)].read_sample();
+        mixed_tnd += 0.00494 * streams_[to_index(Audio::Channel::Noise)].read_sample();
+        mixed_tnd += 0.00335 * streams_[to_index(Audio::Channel::Recorded_Sample)].read_sample();
 
         mixed_sample = mixed_square_pulses + mixed_tnd;
 
@@ -185,7 +254,34 @@ qint64 Generator::readData(char *data, qint64 max_len)
 
         int16_t output_sample = static_cast<int16_t>(mixed_sample);
 
-        memcpy(data + total, &output_sample, SAMPLE_SIZE_BYTES);
+        {
+            output_buffer_.push(output_sample);
+        }
+    }
+}
+
+void Generator::step()
+{
+    {
+        std::scoped_lock lock(lock_);
+        events_.push(std::make_pair(Event::Step, Audio::Channel::Square_Pulse_1));
+    }
+    sema_.release();
+}
+
+qint64 Generator::readData(char *data, qint64 max_len)
+{
+    // This function is being called from a QT audio thread. Take the generator lock to make sure
+    // the streams_ buffers are not manipulated while reading.
+    std::scoped_lock lock(lock_);
+
+    static constexpr int32_t SAMPLE_SIZE_BYTES = 2;
+    qint64 total = 0;
+
+    while (max_len - total > SAMPLE_SIZE_BYTES && !output_buffer_.is_empty())
+    {
+        int16_t sample = output_buffer_.pop();
+        memcpy(data + total, &sample, SAMPLE_SIZE_BYTES);
 
         total += SAMPLE_SIZE_BYTES;
     }
@@ -198,21 +294,42 @@ qint64 Generator::bytesAvailable() const
     return size() + QIODevice::bytesAvailable();
 }
 
-void Generator::update_parameters(Audio::Channel channel, Audio::Parameters params, std::vector<uint8_t> buffer)
+void Generator::decrement_counter(Audio::Channel channel)
 {
     std::scoped_lock lock(lock_);
-    streams_[to_index(channel)].reload(params, buffer);
+    events_.push(std::make_pair(Event::Decrement_Counter, channel));
+
+    sema_.release();
+}
+
+void Generator::decrement_volume_envelope(Audio::Channel channel)
+{
+    std::scoped_lock lock(lock_);
+    events_.push(std::make_pair(Event::Decrement_Volume, channel));
+
+    sema_.release();
+}
+
+void Generator::update_parameters(Audio::Channel channel, Audio::Parameters params, bool reset_phase)
+{
+    std::scoped_lock lock(lock_);
+
+    if (reset_phase)
+    {
+        events_.push(std::make_pair(Event::Parameter_Update_Reset_Phase, channel));
+    }
+    else
+    {
+        events_.push(std::make_pair(Event::Parameter_Update, channel));
+    }
+    param_updates_.push(params);
+
+    sema_.release();
 }
 
 AudioStream::AudioStream(Audio::Channel channel)
  : channel_(channel)
 {
-    // enough samples to feed zeros
-    buffer_.push_back(0x00);
-    buffer_.push_back(0x00);
-
-    assert(buffer_.size() >= 2);
-
     if constexpr (ENABLE_APU_LOGGING)
     {
         std::string path = std::string("/tmp/") +
@@ -225,6 +342,7 @@ AudioStream::AudioStream(Audio::Channel channel)
             LOG(WARNING) << "Could not write " << path;
         }
     }
+    waveform_ = std::make_shared<Waveform>();
 }
 
 AudioStream::AudioStream(AudioStream&& other)
@@ -234,25 +352,22 @@ AudioStream::AudioStream(AudioStream&& other)
  , volume_offset_(other.volume_offset_)
  , constant_volume_(other.constant_volume_)
  , pos_(other.pos_)
- , buffer_(std::move(other.buffer_))
+ , waveform_(other.waveform_)
  , log_(std::move(other.log_))
 {
-    enabled_ = other.enabled_.load();
+    enabled_ = other.enabled_;
 }
 
 int16_t AudioStream::read_sample()
 {
     if (!enabled_)
     {
-        if constexpr (ENABLE_APU_LOGGING)
-        {
-            log_ << '-' << std::endl;
-        }
         return 0;
     }
 
-    int16_t result = *reinterpret_cast<int16_t*>(&buffer_[pos_]);
-    pos_ = (pos_ + 2) % buffer_.size();
+    // int16_t result = *reinterpret_cast<int16_t*>(&buffer_[pos_]);
+    // pos_ = (pos_ + 2) % buffer_.size();
+    int16_t result = waveform_->read_sample();
 
     int16_t volume_adjusted = int16_t(result * (volume_ / 15.0));
 
@@ -290,6 +405,11 @@ void AudioStream::decrement_volume_envelope()
     {
         volume_ = 0;
     }
+
+    if (volume_ == 0)
+    {
+        set_enabled(false);
+    }
 }
 
 void AudioStream::decrement_counter()
@@ -306,11 +426,9 @@ void AudioStream::decrement_counter()
     }
 }
 
-void AudioStream::reload(Audio::Parameters params, std::vector<uint8_t> buffer)
+void AudioStream::reload(Audio::Parameters params, bool reset_phase)
 {
-    assert(buffer.size() >= 2);
-
-    buffer_ = buffer;
+    waveform_->set_frequency(params.frequency, params.duty_cycle, reset_phase);
     pos_ = 0;
     counter_ = params.counter;
 

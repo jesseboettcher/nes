@@ -34,6 +34,7 @@ public:
     static constexpr uint16_t APU_STATUS = 0x4015;
     static constexpr uint16_t APU_STATUS_PULSE1_ENABLE = 0x0001;
     static constexpr uint16_t APU_STATUS_PULSE2_ENABLE = 0x0002;
+    static constexpr uint16_t APU_STATUS_TRIANGLE_ENABLE = 0x0004;
     static constexpr uint16_t APU_FRAME_COUNTER = 0x4017; // for writes, reads come from JOYPAD7
 
     class Registers
@@ -120,8 +121,12 @@ private:
     uint16_t get_frame_counter_mode_steps(uint8_t r);
 
     Registers registers_;
+    int32_t steps_per_frame_{4};
+    int32_t cycles_per_step_{0};
     uint64_t frame_counter_steps_{0};
 
     AudioPlayer player_;
     std::array<Audio::Parameters, magic_enum::enum_count<Audio::Channel>()> params_;
+
+    uint64_t cycles_{0};
 };

@@ -18,21 +18,22 @@ AudioPlayer::AudioPlayer()
     audio_sink_ = std::make_shared<QAudioSink>(device, format);
 }
 
-void AudioPlayer::update_parameters(Audio::Channel channel, Audio::Parameters params)
+void AudioPlayer::update_parameters(Audio::Channel channel, Audio::Parameters params, bool reset_phase)
 {
-    LOG(INFO) << "AudioPlayer update_parameters " << magic_enum::enum_name<Audio::Channel>(channel) << " "
-              << "freq " << params.frequency << " "
-              << "duty " << params.duty_cycle << " "
-              << "volume " << params.volume << " "
-              << "constant vol " << +params.constant_volume << " "
-              << "counter " << params.counter << " "
-              << "loop " << +params.loop;
+    // LOG(INFO) << "AudioPlayer update_parameters " << magic_enum::enum_name<Audio::Channel>(channel) << " "
+    //           << " reset phase " << +reset_phase << " "
+    //           << "freq " << params.frequency << " "
+    //           << "duty " << params.duty_cycle << " "
+    //           << "volume " << params.volume << " "
+    //           << "constant vol " << +params.constant_volume << " "
+    //           << "counter " << params.counter << " "
+    //           << "loop " << +params.loop
+    //           << " sweep_enabled " << +params.sweep_enabled
+    //           << " sweep_period " << params.sweep_period
+    //           << " sweep_negate " << +params.sweep_negate
+    //           << " sweep_shift_count " << params.sweep_shift_count;
 
-    QAudioDevice device = QMediaDevices::defaultAudioOutput();
-    QAudioFormat format = device.preferredFormat();
-
-    generator_->update_parameters(channel, params,
-                                  square_wav(format, 1 * 1000000, params.frequency));
+    generator_->update_parameters(channel, params, reset_phase);
 }
 
 void AudioPlayer::set_enabled(Audio::Channel channel, bool enabled)
@@ -72,6 +73,11 @@ void AudioPlayer::reset()
     generator_->set_enabled(Audio::Channel::Triangle, false);
     generator_->set_enabled(Audio::Channel::Noise, false);
     generator_->set_enabled(Audio::Channel::Recorded_Sample, false);
+}
+
+void AudioPlayer::step()
+{
+    generator_->step();
 }
 
 void AudioPlayer::test()

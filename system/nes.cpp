@@ -107,6 +107,9 @@ bool Nes::step()
     {
         joypads_->step();
         should_continue = processor_->step();
+    }
+    if (clock_ticks_ % 24 == 0)
+    {
         apu_->step(clock_ticks_);
     }
 

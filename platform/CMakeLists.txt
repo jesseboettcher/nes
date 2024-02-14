@@ -31,6 +31,7 @@ qt_add_qml_module(appnes_qt
     SOURCES ../config/flags.hpp
     SOURCES ../processor/instructions.cpp ../processor/instructions.hpp ../processor/address_bus.cpp ../processor/address_bus.hpp ../processor/nes_apu.cpp ../processor/nes_apu.hpp ../processor/nes_ppu.cpp ../processor/nes_ppu.hpp ../processor/processor_6502.cpp ../processor/processor_6502.hpp ../processor/utils.cpp ../processor/utils.hpp ../processor/ppu_address_bus.hpp
     SOURCES ../io/display.cpp ../io/joypads.cpp ../io/cartridge.cpp ../io/cartridge.hpp ../io/display.hpp ../io/files.cpp ../io/files.hpp  ../io/prompt.cpp ../io/prompt.hpp
+    SOURCES ../lib/utils.cpp
     SOURCES ../system/nes.cpp ../system/nes.hpp
     SOURCES ../test/6502_tests.cpp
 )

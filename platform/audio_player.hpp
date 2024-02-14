@@ -18,7 +18,10 @@ public:
     void stop();
     void reset();
 
-    void update_parameters(Audio::Channel channel, Audio::Parameters params);
+    // Grab latest samples and queue them into the output buffer for the audio system to pull from
+    void step();
+
+    void update_parameters(Audio::Channel channel, Audio::Parameters params, bool reset_phase);
     void set_enabled(Audio::Channel channel, bool enabled);
 
     void decrement_counter(Audio::Channel channel);

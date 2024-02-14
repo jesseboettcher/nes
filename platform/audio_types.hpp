@@ -16,13 +16,18 @@ enum class Channel
 
 struct Parameters
 {
-    int32_t counter; // countdown ticks
-    int32_t frequency;
-    int32_t volume;
-    bool constant_volume;
+    Channel channel;
+    int32_t counter{0}; // countdown ticks
+    int32_t frequency{1};
+    int32_t volume{0};
+    bool constant_volume{false};
     float duty_cycle; // square waves only
-    bool loop;
-    // todo envelope, volume, sweep
+    bool loop{false};
+
+    bool sweep_enabled{false};
+    int32_t sweep_period{0};
+    bool sweep_negate{false};
+    int32_t sweep_shift_count{0};
 };
 
 }
