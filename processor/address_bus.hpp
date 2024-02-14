@@ -2,6 +2,7 @@
 
 #include "io/cartridge.hpp"
 #include "io/joypads.hpp"
+#include "processor/nes_apu.hpp"
 #include "processor/nes_ppu.hpp"
 
 #include <array>
@@ -114,6 +115,7 @@ public:
     void attach_cartridge(std::shared_ptr<Cartridge> cartridge) { cartridge_ = cartridge; }
     void attach_joypads(std::shared_ptr<Joypads> joypads) { joypads_ = joypads; }
     void attach_ppu(std::shared_ptr<NesPPU> ppu) { ppu_ = ppu; }
+    void attach_apu(std::shared_ptr<NesAPU> apu) { apu_ = apu; }
 
 private:
     void check_notifiers(const std::vector<std::pair<uint16_t, AccessNotifier>>& notifiers, const uint16_t access_addr) const
@@ -131,4 +133,5 @@ private:
     std::shared_ptr<Cartridge> cartridge_;
     std::shared_ptr<Joypads> joypads_;
     std::shared_ptr<NesPPU> ppu_;
+    std::shared_ptr<NesAPU> apu_;
 };

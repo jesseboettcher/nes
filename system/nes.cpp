@@ -22,6 +22,7 @@ Nes::Nes(std::shared_ptr<Cartridge> cartridge)
     address_bus_.attach_cpu(processor_);
     address_bus_.attach_joypads(joypads_);
     address_bus_.attach_ppu(ppu_);
+    address_bus_.attach_apu(apu_);
 
     ppu_address_bus_.attach_ppu(ppu_);
 
@@ -29,6 +30,10 @@ Nes::Nes(std::shared_ptr<Cartridge> cartridge)
     display_.init();
 
     update_state(State::OFF);
+
+    // start the audio right away, it will play empty samples until something is pushed
+    // this needs to be called from the UI thread
+    apu_->start();
 }
 
 Nes::~Nes()
@@ -51,6 +56,7 @@ bool Nes::load_cartridge(std::shared_ptr<Cartridge> cartridge)
         cartridge_->reset();
         processor_->reset();
         ppu_->reset();
+        apu_->reset();
 
         update_state(State::IDLE);
     }
@@ -70,6 +76,7 @@ void Nes::run_continuous()
         }
         check_timer();
     }
+
     update_state(State::IDLE);
 }
 
@@ -100,6 +107,10 @@ bool Nes::step()
     {
         joypads_->step();
         should_continue = processor_->step();
+    }
+    if (clock_ticks_ % 24 == 0)
+    {
+        apu_->step(clock_ticks_);
     }
 
     return should_continue;

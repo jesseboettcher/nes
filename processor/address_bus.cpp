@@ -31,7 +31,7 @@ const uint8_t AddressBus::read(int32_t a) const
     }
     else if (a <= 0x401F) // disabled APU, IO functions
     {
-        return 0;
+        return apu_->read_register(a);
     }
     else if (cartridge_)
     {
@@ -67,9 +67,7 @@ uint8_t& AddressBus::write(int32_t a)
             return ppu_->write_register(a);
         }
 
-        // APU
-        static uint8_t apu_placeholder = 0;
-        return apu_placeholder;
+        return apu_->write_register(a);
     }
     else if (a <= 0x401F) // disabled APU, IO functions
     {

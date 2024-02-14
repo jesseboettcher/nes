@@ -3,6 +3,7 @@
 
 #pragma once
 
+static constexpr bool ENABLE_APU_LOGGING = false;
 static constexpr bool ENABLE_CPU_LOGGING = false;
 
 #endif  // __FLAGS_H__
