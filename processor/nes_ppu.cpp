@@ -37,6 +37,8 @@ void NesPPU::reset()
 
     cached_nametable_address_ = nametable_base_address();
     cached_patterntable_address = pattern_table_base_address();
+
+    scroll_ = std::make_pair(0, 0);
 }
 
 void NesPPU::run()
@@ -50,6 +52,7 @@ bool NesPPU::step()
     handle_oam_data_register();
     handle_ppu_data_register();
     handle_oam_dma_register();
+    handle_scroll_register();
 
     if (is_rendering_scanline())
     {
@@ -87,6 +90,8 @@ bool NesPPU::step()
     {
         registers_[PPUSTATUS] &= ~PPUSTATUS_vblank;
         registers_[PPUSTATUS] &= ~PPUSTATUS_sprite0_hit;
+
+        scroll_ = std::make_pair(pending_scroll_x_, pending_scroll_y_);
     }
 
     return true;
@@ -103,6 +108,11 @@ uint8_t& NesPPU::write_register(uint16_t a)
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
 
+    if (a == OAMDMA)
+    {
+        return oam_dma_register_.write();
+    }
+
     registers_.set_had_write(a);
     return registers_[a];
 }
@@ -112,17 +122,19 @@ void NesPPU::render_pixel()
     // Determine which pixel we are working on
     const uint8_t pixel_x = cycle_;
     const uint8_t pixel_y = scanline_;
+    const uint16_t background_pixel_x = pixel_x + scroll_.first;
+    const uint16_t background_pixel_y = pixel_y + scroll_.second;
 
     // Get the index of the pattern tile from the nametable
-    const uint8_t pattern_tile_index = get_pattern_tile_index_for_pixel(pixel_x, pixel_y);
+    const uint8_t pattern_tile_index = get_pattern_tile_index_for_pixel(background_pixel_x, background_pixel_y);
 
     // Get the index into the color table from the pattern table tile
     const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(cached_patterntable_address,
-                                                                             pixel_x % 8,
-                                                                             pixel_y % NAMETABLE_TILE_SIZE,
+                                                                             background_pixel_x % 8,
+                                                                             background_pixel_y % NAMETABLE_TILE_SIZE,
                                                                              pattern_tile_index);
     // Determine which palette to use
-    const uint8_t palette_index = get_palette_index_for_pixel(pixel_x, pixel_y);
+    const uint8_t palette_index = get_palette_index_for_pixel(background_pixel_x, background_pixel_y);
 
     // Retrieve the RGB color for this pixel
     const NesDisplay::Color pixel_color = fetch_color_from_palette(palette_index, colortable_index);
@@ -137,19 +149,20 @@ void NesPPU::render_pixel()
     display_.draw_pixel(pixel_x, pixel_y, pixel_color);
 }
 
-uint8_t NesPPU::get_pattern_tile_index_for_pixel(uint8_t pixel_x, uint8_t pixel_y)
+uint8_t NesPPU::get_pattern_tile_index_for_pixel(uint16_t pixel_x, uint16_t pixel_y)
 {
     // Retrieve the nametable data for this pixel. The nametable is broken up into 8x8 tiles
     // which contain an index into the pattern table.
-    const uint8_t tile_y = pixel_y / NAMETABLE_TILE_SIZE;
-    const uint8_t tile_x = pixel_x / NAMETABLE_TILE_SIZE;
-    const uint16_t nt_addr = cached_nametable_address_ + tile_x + tile_y * NAMETABLE_WIDTH;
-    
+    const uint16_t tile_y = pixel_y % 240 / NAMETABLE_TILE_SIZE;
+    const uint16_t tile_x = pixel_x % 256 / NAMETABLE_TILE_SIZE;
+    const uint16_t nt_addr = nametable_base_address_for_pixel(pixel_x, pixel_y) +
+                             tile_x + tile_y * NAMETABLE_WIDTH;
+
     return ppu_address_bus_.read(nt_addr);
 }
 
 uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_base_address,
-                                                        uint8_t tile_pixel_x, uint8_t tile_pixel_y,
+                                                        uint16_t tile_pixel_x, uint16_t tile_pixel_y,
                                                         uint8_t pattern_tile_index) const
 {
     // Get the pattern table tile from the value found in the nametable. The patterns have
@@ -182,19 +195,20 @@ uint8_t NesPPU::get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_b
     return static_cast<uint8_t>(patterntable_value);
 }
 
-uint8_t NesPPU::get_palette_index_for_pixel(uint8_t pixel_x, uint8_t pixel_y)
+uint8_t NesPPU::get_palette_index_for_pixel(uint16_t pixel_x, uint16_t pixel_y)
 {
     // Get attribute table for the pixel in order to identify which palette should be used.
     // The palette indices for each nametable tile are stored with a byte for each 4x4 set tiles
     static constexpr uint16_t ATTRIBUTETABLE_TILE_SIZE = 32; // in pixels
     static constexpr uint16_t TILES_PER_ATTR_BYTE = 4; // bytes hold 4x4 tile data
     static constexpr uint16_t ATTRIBUTETABLE_WIDTH = 8; // bytes
-    const uint8_t attributetable_x = pixel_x / ATTRIBUTETABLE_TILE_SIZE;
-    const uint8_t attributetable_y = pixel_y / ATTRIBUTETABLE_TILE_SIZE;
-    const uint16_t attribute_addr = cached_nametable_address_ + NAMETABLE_WIDTH * NAMETABLE_HEIGHT +
+    const uint8_t attributetable_x = pixel_x % 256 / ATTRIBUTETABLE_TILE_SIZE;
+    const uint8_t attributetable_y = pixel_y % 240 / ATTRIBUTETABLE_TILE_SIZE;
+    const uint16_t attribute_addr = nametable_base_address_for_pixel(pixel_x, pixel_y) +
+                                    NAMETABLE_WIDTH * NAMETABLE_HEIGHT +
                                     attributetable_x + attributetable_y * ATTRIBUTETABLE_WIDTH;
-    const uint8_t tile_y = pixel_y / NAMETABLE_TILE_SIZE;
-    const uint8_t tile_x = pixel_x / NAMETABLE_TILE_SIZE;
+    const uint8_t tile_x = pixel_x % 256 / NAMETABLE_TILE_SIZE;
+    const uint8_t tile_y = pixel_y % 240 / NAMETABLE_TILE_SIZE;
 
     const uint8_t tile_offset_x = tile_x % TILES_PER_ATTR_BYTE;
     const uint8_t tile_offset_y = tile_y % TILES_PER_ATTR_BYTE;
@@ -454,14 +468,31 @@ uint8_t NesPPU::read_ppu_data()
 
 void NesPPU::handle_oam_dma_register()
 {
-    if (registers_.had_write(OAMDMA))
+    if (oam_dma_register_.had_write())
     {
-        registers_.clear_write_flag(OAMDMA);
+        oam_dma_register_.clear_write_flag();
 
-        uint16_t oam_src_addr = registers_[OAMDMA] << 8;
+        uint16_t oam_src_addr = oam_dma_register_.value() << 8;
         for (uint16_t i = 0;i < oam_memory_.size();i++)
         {
             oam_memory_[i] = address_bus_.read(oam_src_addr + i);
+        }
+    }
+}
+
+void NesPPU::handle_scroll_register()
+{
+    if (registers_.had_write(PPUSCROLL))
+    {
+        registers_.clear_write_flag(PPUSCROLL);
+
+        if (scroll_write_count_++ % 2 == 0)
+        {
+            pending_scroll_x_ = registers_[PPUSCROLL];
+        }
+        else
+        {
+            pending_scroll_y_ = registers_[PPUSCROLL];
         }
     }
 }
@@ -535,6 +566,24 @@ uint16_t NesPPU::nametable_base_address()
     }
     assert(false);
     return 0;
+}
+
+uint16_t NesPPU::nametable_base_address_for_pixel(uint16_t pixel_x, uint16_t pixel_y)
+{
+    uint16_t nt_base = cached_nametable_address_;
+
+    uint16_t wrapped_x = pixel_x % 512;
+    uint16_t wrapped_y = pixel_y % 480;
+
+    if (wrapped_x >= 256)
+    {
+        nt_base ^= 0x0400;
+    }
+    if (wrapped_y >= 240)
+    {
+        nt_base ^= 0x0800;
+    }
+    return nt_base;
 }
 
 uint16_t NesPPU::sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1) const
