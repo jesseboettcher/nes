@@ -2,6 +2,7 @@
 
 #include "platform/ui_context.hpp"
 
+#include <gainput/gainput.h>
 #include <glog/logging.h>
 #include <iomanip>
 
@@ -96,6 +97,84 @@ void update_ui_sprites_view(const std::vector<NesPPU::Sprite>& sprite_data)
     }
 }
 
+class JoypadInput
+{
+public:
+    JoypadInput()
+    {
+        input_manager_ = new gainput::InputManager;
+        gamepad_id_ = input_manager_->CreateDevice<gainput::InputDevicePad>();
+        input_map_ = new gainput::InputMap(*input_manager_);
+
+        input_map_->MapBool(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::A),      gamepad_id_, gainput::PadButtonA);
+        input_map_->MapBool(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::B),      gamepad_id_, gainput::PadButtonB);
+        input_map_->MapBool(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::Select), gamepad_id_, gainput::PadButtonSelect);
+        input_map_->MapBool(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::Start),  gamepad_id_, gainput::PadButtonStart);
+        input_map_->MapFloat(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::Up),    gamepad_id_, gainput::PadButtonLeftStickY);
+        input_map_->MapFloat(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::Down),  gamepad_id_, gainput::PadButtonLeftStickY);
+        input_map_->MapFloat(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::Left),  gamepad_id_, gainput::PadButtonLeftStickX);
+        input_map_->MapFloat(magic_enum::enum_integer<Joypads::Button>(Joypads::Button::Right), gamepad_id_, gainput::PadButtonLeftStickX);
+    }
+
+    bool is_dir_pad_x(Joypads::Button button)
+    {
+        return button == Joypads::Button::Right ||
+               button == Joypads::Button::Left;
+    }
+
+    bool is_dir_pad_y(Joypads::Button button)
+    {
+        return button == Joypads::Button::Up ||
+               button == Joypads::Button::Down;
+    }
+
+    bool is_button_pressed(Joypads::Button button)
+    {
+        input_manager_->Update();
+
+        bool result = false;
+
+        if (is_dir_pad_x(button))
+        {
+            if (button == Joypads::Button::Left)
+            {
+                result = input_map_->GetFloat(magic_enum::enum_integer<Joypads::Button>(button)) < 0;
+            }
+            else
+            {
+                result = input_map_->GetFloat(magic_enum::enum_integer<Joypads::Button>(button)) > 0;
+            }
+            return result;
+        }
+        if (is_dir_pad_y(button))
+        {
+            if (button == Joypads::Button::Up)
+            {
+                result = input_map_->GetFloat(magic_enum::enum_integer<Joypads::Button>(button)) > 0;
+            }
+            else
+            {
+                result = input_map_->GetFloat(magic_enum::enum_integer<Joypads::Button>(button)) < 0;
+            }
+            return result;
+        }
+
+        return input_map_->GetBool(magic_enum::enum_integer<Joypads::Button>(button));
+    }
+
+private:
+    gainput::InputManager* input_manager_;
+    gainput::DeviceId gamepad_id_;
+    gainput::InputMap* input_map_;
+};
+
+JoypadInput* joypad_input = nullptr;
+
+void init_joypad_input()
+{
+    joypad_input = new JoypadInput;
+}
+
 bool is_button_pressed(Joypads::Button button)
 {
     static const std::unordered_map<Joypads::Button, int> button_to_key_map = {
@@ -108,8 +187,9 @@ bool is_button_pressed(Joypads::Button button)
         { Joypads::Button::Left,    Qt::Key::Key_Left },
         { Joypads::Button::Right,   Qt::Key::Key_Right }
     };
-
     UIContext& ui = UIContext::instance();
 
-    return ui.main_window->is_key_pressed(button_to_key_map.at(button));
+
+    return ui.main_window->is_key_pressed(button_to_key_map.at(button)) ||
+           joypad_input->is_button_pressed(button);
 }

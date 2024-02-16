@@ -25,7 +25,20 @@ FetchContent_Declare(
   GIT_TAG        v3.11.3
 )
 
+FetchContent_Declare(
+  gainput
+  GIT_REPOSITORY https://github.com/jesseboettcher/gainput.git
+  GIT_TAG        master
+)
+
 FetchContent_MakeAvailable(json)
+
+# some gainput build options to build only the static library:
+set(GAINPUT_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(GAINPUT_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(GAINPUT_SAMPLES OFF CACHE BOOL "" FORCE)
+set(GAINPUT_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(gainput)
 
 target_include_directories(appnes_qt
     PRIVATE ../
@@ -66,6 +79,7 @@ target_link_libraries(appnes_qt
     PRIVATE Qt6::Quick Qt6::Widgets
     PRIVATE Qt6::Quick Qt6::Multimedia
     PRIVATE nlohmann_json::nlohmann_json
+    PRIVATE gainput
 )
 
 include(GNUInstallDirs)

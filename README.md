@@ -19,9 +19,9 @@ You'll need an installation of QT6 and then update the below instructions with y
 - [x] Boot Ice Hockey and Donkey Kong to main menu (ppu background tiles)
 - [x] Donkey Kong playable (ppu sprites)
 - [ ] Ice Hockey Playable (ppu scrolling)
-- [ ] Sound
+- [ ] Sound (partially enabled now)
 - [ ] Load Zelda (cartridge mapper 1)
-- [ ] USB controllers
+- [x] USB controllers (one player)
 
 # Resources
 

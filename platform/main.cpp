@@ -228,5 +228,7 @@ int main(int argc, char *argv[])
     create_windows();
     create_menus();
 
+    init_joypad_input();
+
     return app.exec();
 }

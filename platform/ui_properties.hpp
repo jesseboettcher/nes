@@ -51,4 +51,8 @@ void update_ui_opacity(UI property, double opacity);
 void update_ui_memory_view(const AddressBus& memory);
 void update_ui_sprites_view(const std::vector<NesPPU::Sprite>& sprite_data);
 
+// init_joypad_input initializes gainput classes that setup callbacks for
+// os input callbacks (on macos). It must be called from the main thread in
+// order to connect to the CFRunloop.
+void init_joypad_input();
 bool is_button_pressed(Joypads::Button button);
