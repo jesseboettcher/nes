@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 
 project(nes_qt VERSION 0.1 LANGUAGES CXX)
 
+include(FetchContent)
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
@@ -16,6 +18,14 @@ qt_add_executable(appnes_qt
     main.cpp view_update_relay.hpp menu_handler.hpp menu_handler.cpp ui_controller.hpp ui_properties.cpp ui_window.hpp ui_context.cpp ui_context.hpp sprites_model.cpp sprites_model.hpp
     audio_player.hpp audio_player.cpp audio_output.hpp audio_output.cpp
 )
+
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG        v3.11.3
+)
+
+FetchContent_MakeAvailable(json)
 
 target_include_directories(appnes_qt
     PRIVATE ../
@@ -55,6 +65,7 @@ set_target_properties(appnes_qt PROPERTIES
 target_link_libraries(appnes_qt
     PRIVATE Qt6::Quick Qt6::Widgets
     PRIVATE Qt6::Quick Qt6::Multimedia
+    PRIVATE nlohmann_json::nlohmann_json
 )
 
 include(GNUInstallDirs)

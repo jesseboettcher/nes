@@ -1,8 +1,9 @@
 #pragma once
 
-#include "lib/json.hpp"
 #include "processor/address_bus.hpp"
 #include "processor/processor_6502.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <set>
 
