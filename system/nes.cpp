@@ -74,7 +74,7 @@ void Nes::run_continuous()
         {
             continue;
         }
-        check_timer();
+        adjust_emulation_speed();
     }
 
     update_state(State::IDLE);
@@ -90,7 +90,7 @@ void Nes::run()
         {
             break;
         }
-        check_timer();
+        adjust_emulation_speed();
     }
     update_state(State::IDLE);
 }
@@ -143,19 +143,57 @@ void Nes::user_interrupt()
     }
 }
 
-void Nes::check_timer()
+void Nes::adjust_emulation_speed()
 {
     static auto start_time = std::chrono::high_resolution_clock::now();
     static auto last_update_time = std::chrono::high_resolution_clock::now();
     static uint64_t last_cycle_count = 0;
+    static int32_t adjustment_padding = 0;
+    static constexpr int32_t ADJUSTMENT_PADDING_DELTA = 25;
     
-    if (processor_->cycle_count() - last_cycle_count > 1789773)
+    if (processor_->cycle_count() - last_cycle_count > 17897)  // 1789773 = 1 second
     {
         auto current_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> delta = current_time - last_update_time;
+        std::chrono::duration<double, std::micro> delta = current_time - last_update_time;
+
+        // double percent_realtime = 10000.0 / delta.count();
+        if (10000 > delta.count())
+        {
+            std::chrono::duration<double, std::micro> wait_for(10000 - delta.count() - adjustment_padding);
+            std::this_thread::sleep_for(wait_for);
+        }
+
+        current_time = std::chrono::high_resolution_clock::now();
+        delta = current_time - last_update_time;
+
+        if (10000 > delta.count())
+        {
+            adjustment_padding -= ADJUSTMENT_PADDING_DELTA;
+        }
+        else
+        {
+            adjustment_padding += ADJUSTMENT_PADDING_DELTA;
+        }
+
+        last_update_time = std::chrono::high_resolution_clock::now();
+        last_cycle_count = processor_->cycle_count();
+    }
+    print_emulation_speed();
+}
+
+void Nes::print_emulation_speed()
+{
+    static auto start_time = std::chrono::high_resolution_clock::now();
+    static auto last_update_time = std::chrono::high_resolution_clock::now();
+    static uint64_t last_cycle_count = 0;
+
+    if (processor_->cycle_count() - last_cycle_count > 17897730)  // 1789773 = 1 second
+    {
+        auto current_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::micro> delta = current_time - last_update_time;
         std::chrono::duration<double> uptime_seconds = current_time - start_time;
 
-        std::cout << (100.0 * 1000.0 / delta.count()) << std::dec << "% of realtime" << " cycle "
+        std::cout << (100.0 * 10000000.0 / delta.count()) << std::dec << "% of realtime" << " cycle "
                   << "cycle " << processor_->cycle_count() << ", "
                   << "uptime: " << uptime_seconds.count() << " seconds" << std::endl;
 

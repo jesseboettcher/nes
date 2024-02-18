@@ -52,7 +52,8 @@ protected:
 	NesPPU& ppu() { return *ppu_; }
 
 private:
-    void check_timer();
+    void adjust_emulation_speed();
+    void print_emulation_speed();
 
     void update_state(State state);
     
