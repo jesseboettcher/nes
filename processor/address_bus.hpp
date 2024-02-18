@@ -70,17 +70,17 @@ public:
     const uint8_t read(int32_t a) const;
 
     // returns reference to memory to be written
-    uint8_t& write(int32_t a);
+    void write(int32_t a, uint8_t value);
 
     const uint8_t operator [] (int32_t i) const
     {
         return read(i);
     }
 
-    uint8_t& operator [] (int32_t i)
-    {
-        return write(i);
-    }
+    // uint8_t& operator [] (int32_t i)
+    // {
+    //     return write(i);
+    // }
 
     const View view(int32_t address, int32_t size) const
     {
@@ -101,7 +101,7 @@ public:
 
     void stack_push(uint8_t& sp, uint8_t data)
     {
-        (*this)[0x0100 + sp] = data;
+        write(0x0100 + sp, data);
         sp--;
     }
 

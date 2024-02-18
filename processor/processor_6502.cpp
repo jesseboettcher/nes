@@ -330,7 +330,6 @@ bool Processor6502::ready_to_execute(const Instruction& pending_op)
     if (instr_table_[opcode].addr_mode == AddressingMode::INVALID)
     {
         LOG(ERROR) << "test valid sig " << std::hex << +address_bus_[0x6001] << " " << +address_bus_[0x6002] << " " << +address_bus_[0x6003];
-        LOG(ERROR) << &address_bus_[0x6004];
         LOG(ERROR) << "status " << +address_bus_[0x6000];
         LOG(ERROR) << "Unknown instruction: " << pending_op << " PC: " << registers_.PC << " cycle: " << std::dec << cycle_count_;
         log_ << "Unknown instruction: " << pending_op << " PC: " << registers_.PC << " cycle: " << std::dec << cycle_count_ << std::endl;

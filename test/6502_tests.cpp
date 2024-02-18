@@ -31,7 +31,7 @@ bool Test6502::run_one_test(const json& j, std::string name)
 	{
         uint8_t v = initial_ram.at(i).at(1);
         uint16_t a = initial_ram.at(i).at(0);
-        m[a] = v;
+        m.write(a, v);
 	}
 
 	// step the processor

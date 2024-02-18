@@ -184,7 +184,7 @@ bool CommandPrompt::execute_command(Nes& nes, std::string cmd)
             assert(base_match.size() == 5);
             uint8_t value = std::stoi(base_match[4], 0, 0);
 
-            nes.processor().memory()[std::stoi(base_match[3], 0, 0)] = value;
+            nes.processor().memory().write(std::stoi(base_match[3], 0, 0), value);
             update_ui_memory_view(nes.processor().cmemory());
         }
     }

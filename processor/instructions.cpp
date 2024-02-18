@@ -96,7 +96,7 @@ static uint8_t ASL(const Instruction& i, Registers& r, AddressBus& m)
     }
     else
     {
-        m[i.address()] = data;
+        m.write(i.address(), data);
     }
 
     return 0;
@@ -421,7 +421,7 @@ static uint8_t DEC(const Instruction& i, Registers& r, AddressBus& m)
     // N   Z   C   I   D   V
     // +   +   -   -   -   -
 
-    m[i.address()]--;
+    m.write(i.address(), m[i.address()] - 1);
 
     r.update_zero_flag(r, m[i.address()]);
     r.update_negative_flag(r, m[i.address()]);
@@ -479,7 +479,7 @@ static uint8_t INC(const Instruction& i, Registers& r, AddressBus& m)
     // N    Z   C   I   D   V
     // +    +   -   -   -   -
 
-    m[i.address()]++;
+    m.write(i.address(), m[i.address()] + 1);
 
     r.update_zero_flag(r, m[i.address()]);
     r.update_negative_flag(r, m[i.address()]);
@@ -620,7 +620,7 @@ static uint8_t LSR(const Instruction& i, Registers& r, AddressBus& m)
     }
     else
     {
-        m[i.address()] = data;
+        m.write(i.address(), data);
     }
 
     return 0;
@@ -703,7 +703,7 @@ static uint8_t ROL(const Instruction& i, Registers& r, AddressBus& m)
     }
     else
     {
-        m[i.address()] = data;
+        m.write(i.address(), data);
     }
 
     return 0;
@@ -731,7 +731,7 @@ static uint8_t ROR(const Instruction& i, Registers& r, AddressBus& m)
     }
     else
     {
-        m[i.address()] = data;
+        m.write(i.address(), data);
     }
 
     return 0;
@@ -863,7 +863,7 @@ static uint8_t STA(const Instruction& i, Registers& r, AddressBus& m)
     // N    Z   C   I   D   V
     // -    -   -   -   -   -
 
-    m[i.address()] = r.A;
+    m.write(i.address(), r.A);
 
     return 0;
 }
@@ -874,7 +874,7 @@ static uint8_t STX(const Instruction& i, Registers& r, AddressBus& m)
     // N   Z   C   I   D   V
     // -   -   -   -   -   -
 
-    m[i.address()] = r.X;
+    m.write(i.address(), r.X);
 
     return 0;
 }
@@ -885,7 +885,7 @@ static uint8_t STY(const Instruction& i, Registers& r, AddressBus& m)
     // N   Z   C   I   D   V
     // -   -   -   -   -   -
 
-    m[i.address()] = r.Y;
+    m.write(i.address(), r.Y);
 
     return 0;
 }
