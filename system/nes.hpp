@@ -29,7 +29,6 @@ public:
     
 	// Run and execute instructions from memory
 	void run();
-	void run_continuous();
 
 	// Step the system 1 cycle. Returns true if the system should continue running
 	bool step();

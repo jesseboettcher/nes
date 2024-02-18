@@ -242,12 +242,6 @@ uint8_t Processor6502::execute_instruction(const Instruction& i)
         throw "Unimplemented instruction";
     }
 
-    if (verbose())
-    {
-        // std::cout << cycle_count_ << "\t"
-        //          << "0x0" << std::hex << std::uppercase << registers_.PC << "    "
-        //        << instr_table_[i.opcode()].assembler << ":" << i << std::dec << std::endl;
-    }
     uint16_t previous_PC = registers_.PC - instr_table_[i.opcode()].bytes;
 
     bool extra_cycles = instr_table_[i.opcode()].handler(i, registers_, address_bus_);

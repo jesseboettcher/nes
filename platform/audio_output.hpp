@@ -123,7 +123,7 @@ private:
     inline int32_t to_index(Audio::Channel channel) { return magic_enum::enum_integer<Audio::Channel>(channel); }
 
     // For synchronization of stream buffer reading & changes
-    std::mutex lock_;
+    std::mutex streams_lock_;
     std::vector<AudioStream> streams_;
 
     std::shared_ptr<std::thread> producer_;
@@ -132,10 +132,12 @@ private:
     // order. The step events come in at 60hz and the queue ensures that the right number of samples
     // are produced before actions like changing the frequency, volume, or disabling of the channel
     // are taken.
+    std::mutex queues_lock_;
     std::queue<EventChannel> events_;
     std::queue<Audio::Parameters> param_updates_;
     std::counting_semaphore<1> sema_;
 
+    std::mutex output_lock_;
     int32_t samples_per_step_; // 60hz
     CircularBuffer<uint16_t> output_buffer_;
 };

@@ -28,7 +28,6 @@ NesPPU::NesPPU(AddressBus& address_bus, PPUAddressBus& ppu_address_bus, NesDispl
 
 NesPPU::~NesPPU()
 {
-
 }
 
 void NesPPU::reset()
@@ -63,6 +62,7 @@ bool NesPPU::step()
     if (check_rendering_falling_edge())
     {
         render_sprites(Sprite::Layer::Foreground); // TODO integrate with proper timing and background rendering
+
         display_.render();
     }
 

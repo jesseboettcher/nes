@@ -19,33 +19,40 @@ qt_add_executable(appnes_qt
     audio_player.hpp audio_player.cpp audio_output.hpp audio_output.cpp
 )
 
+# json parsing library
 FetchContent_Declare(
   json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
   GIT_TAG        v3.11.3
 )
+FetchContent_MakeAvailable(json)
 
+# gainput is used for cross platform USB joypad support
 FetchContent_Declare(
   gainput
   GIT_REPOSITORY https://github.com/jesseboettcher/gainput.git
   GIT_TAG        master
 )
 
-FetchContent_MakeAvailable(json)
-
-# some gainput build options to build only the static library:
 set(GAINPUT_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(GAINPUT_BUILD_STATIC ON CACHE BOOL "" FORCE)
 set(GAINPUT_SAMPLES OFF CACHE BOOL "" FORCE)
 set(GAINPUT_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(gainput)
 
-target_include_directories(appnes_qt
-    PRIVATE ../
+# minitrace used to generate chrome trace json files
+FetchContent_Declare(
+  minitrace
+  GIT_REPOSITORY https://github.com/hrydgard/minitrace.git
+  GIT_TAG        master
 )
+set(MTR_ENABLED OFF CACHE BOOL "Disable minitrace" FORCE) # Disable minitrace
+FetchContent_MakeAvailable(minitrace)
+target_include_directories(appnes_qt PRIVATE ${minitrace_SOURCE_DIR})
+
+target_include_directories(appnes_qt PRIVATE ../)
 include_directories(../io)
 include_directories(../lib)
-
 
 qt_add_qml_module(appnes_qt
     URI nes_qt
@@ -80,6 +87,7 @@ target_link_libraries(appnes_qt
     PRIVATE Qt6::Quick Qt6::Multimedia
     PRIVATE nlohmann_json::nlohmann_json
     PRIVATE gainput
+    PRIVATE minitrace::minitrace
 )
 
 include(GNUInstallDirs)

@@ -165,15 +165,18 @@ void Generator::producer_loop()
 
         if (success)
         {
-            std::scoped_lock lock(lock_);
-
-            if (events_.empty())
+            EventChannel event;
             {
-                continue;
-            }
+                std::scoped_lock lock(queues_lock_);
 
-            EventChannel event = events_.front();
-            events_.pop();
+                if (events_.empty())
+                {
+                    continue;
+                }
+
+                event = events_.front();
+                events_.pop();
+            }
 
             switch (event.first)
             {
@@ -186,6 +189,8 @@ void Generator::producer_loop()
                 case Event::Parameter_Update:
                 case Event::Parameter_Update_Reset_Phase:
                 {
+                    std::scoped_lock lock(streams_lock_);
+
                     Audio::Parameters params = param_updates_.front();
                     param_updates_.pop();
 
@@ -206,12 +211,14 @@ void Generator::producer_loop()
 
                 case Event::Decrement_Counter:
                 {
+                    std::scoped_lock lock(streams_lock_);
                     streams_[to_index(event.second)].decrement_counter();
                     break;
                 }
 
                 case Event::Decrement_Volume:
                 {
+                    std::scoped_lock lock(streams_lock_);
                     streams_[to_index(event.second)].decrement_volume_envelope();
                     break;
                 }
@@ -233,13 +240,16 @@ void Generator::produce_samples()
         int32_t mixed_tnd = 0; // triangle, noise, DMC
         int32_t mixed_sample = 0;
 
-        mixed_square_pulses += streams_[to_index(Audio::Channel::Square_Pulse_1)].read_sample();
-        mixed_square_pulses += streams_[to_index(Audio::Channel::Square_Pulse_2)].read_sample();
-        mixed_square_pulses *= 0.00752;
+        {
+            std::scoped_lock lock(streams_lock_);
+            mixed_square_pulses += streams_[to_index(Audio::Channel::Square_Pulse_1)].read_sample();
+            mixed_square_pulses += streams_[to_index(Audio::Channel::Square_Pulse_2)].read_sample();
+            mixed_square_pulses *= 0.00752;
 
-        mixed_tnd += 0.00851 * streams_[to_index(Audio::Channel::Triangle)].read_sample();
-        mixed_tnd += 0.00494 * streams_[to_index(Audio::Channel::Noise)].read_sample();
-        mixed_tnd += 0.00335 * streams_[to_index(Audio::Channel::Recorded_Sample)].read_sample();
+            mixed_tnd += 0.00851 * streams_[to_index(Audio::Channel::Triangle)].read_sample();
+            mixed_tnd += 0.00494 * streams_[to_index(Audio::Channel::Noise)].read_sample();
+            mixed_tnd += 0.00335 * streams_[to_index(Audio::Channel::Recorded_Sample)].read_sample();
+        }
 
         mixed_sample = mixed_square_pulses + mixed_tnd;
 
@@ -255,6 +265,7 @@ void Generator::produce_samples()
         int16_t output_sample = static_cast<int16_t>(mixed_sample);
 
         {
+            std::scoped_lock lock(output_lock_);
             output_buffer_.push(output_sample);
         }
     }
@@ -263,7 +274,7 @@ void Generator::produce_samples()
 void Generator::step()
 {
     {
-        std::scoped_lock lock(lock_);
+        std::scoped_lock lock(queues_lock_);
         events_.push(std::make_pair(Event::Step, Audio::Channel::Square_Pulse_1));
     }
     sema_.release();
@@ -273,7 +284,7 @@ qint64 Generator::readData(char *data, qint64 max_len)
 {
     // This function is being called from a QT audio thread. Take the generator lock to make sure
     // the streams_ buffers are not manipulated while reading.
-    std::scoped_lock lock(lock_);
+    std::scoped_lock lock(output_lock_);
 
     static constexpr int32_t SAMPLE_SIZE_BYTES = 2;
     qint64 total = 0;
@@ -296,7 +307,7 @@ qint64 Generator::bytesAvailable() const
 
 void Generator::decrement_counter(Audio::Channel channel)
 {
-    std::scoped_lock lock(lock_);
+    std::scoped_lock lock(queues_lock_);
     events_.push(std::make_pair(Event::Decrement_Counter, channel));
 
     sema_.release();
@@ -304,7 +315,7 @@ void Generator::decrement_counter(Audio::Channel channel)
 
 void Generator::decrement_volume_envelope(Audio::Channel channel)
 {
-    std::scoped_lock lock(lock_);
+    std::scoped_lock lock(queues_lock_);
     events_.push(std::make_pair(Event::Decrement_Volume, channel));
 
     sema_.release();
@@ -312,7 +323,7 @@ void Generator::decrement_volume_envelope(Audio::Channel channel)
 
 void Generator::update_parameters(Audio::Channel channel, Audio::Parameters params, bool reset_phase)
 {
-    std::scoped_lock lock(lock_);
+    std::scoped_lock lock(queues_lock_);
 
     if (reset_phase)
     {

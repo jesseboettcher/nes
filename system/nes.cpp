@@ -1,6 +1,7 @@
 #include "nes.hpp"
 
 #include "platform/ui_properties.hpp"
+#include "minitrace.h"
 
 #include <chrono>
 #include <iostream>
@@ -64,24 +65,12 @@ bool Nes::load_cartridge(std::shared_ptr<Cartridge> cartridge)
     return success;
 }
 
-void Nes::run_continuous()
-{
-    update_state(State::RUNNING);
-
-    while (!should_exit_)
-    {
-        if (!step())
-        {
-            continue;
-        }
-        adjust_emulation_speed();
-    }
-
-    update_state(State::IDLE);
-}
-
 void Nes::run()
 {
+    mtr_init("/tmp/nes_trace.json");
+    MTR_META_PROCESS_NAME("nes_emulator");
+    MTR_META_THREAD_NAME("main_thread");
+
     update_state(State::RUNNING);
     
     while (!should_exit_)
@@ -93,6 +82,9 @@ void Nes::run()
         adjust_emulation_speed();
     }
     update_state(State::IDLE);
+
+    mtr_shutdown();
+    mtr_flush();
 }
 
 bool Nes::step()
@@ -149,14 +141,13 @@ void Nes::adjust_emulation_speed()
     static auto last_update_time = std::chrono::high_resolution_clock::now();
     static uint64_t last_cycle_count = 0;
     static int32_t adjustment_padding = 0;
-    static constexpr int32_t ADJUSTMENT_PADDING_DELTA = 25;
+    static constexpr int32_t ADJUSTMENT_PADDING_DELTA = 5;
     
     if (processor_->cycle_count() - last_cycle_count > 17897)  // 1789773 = 1 second
     {
         auto current_time = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::micro> delta = current_time - last_update_time;
 
-        // double percent_realtime = 10000.0 / delta.count();
         if (10000 > delta.count())
         {
             std::chrono::duration<double, std::micro> wait_for(10000 - delta.count() - adjustment_padding);
@@ -172,7 +163,7 @@ void Nes::adjust_emulation_speed()
         }
         else
         {
-            adjustment_padding += ADJUSTMENT_PADDING_DELTA;
+            adjustment_padding += ADJUSTMENT_PADDING_DELTA * 2;
         }
 
         last_update_time = std::chrono::high_resolution_clock::now();
