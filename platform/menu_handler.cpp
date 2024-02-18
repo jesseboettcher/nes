@@ -22,7 +22,7 @@ void MenuHandler::start_nes(std::filesystem::path path)
 {
     std::shared_ptr<Cartridge> cartridge;
 
-    cartridge = std::make_shared<Cartridge>(path);
+    cartridge = Cartridge::create(path);
 
     if (!UIContext::instance().nes->load_cartridge(std::move(cartridge)))
     {
@@ -35,16 +35,6 @@ void MenuHandler::start_nes(std::filesystem::path path)
 
 void MenuHandler::load_rom()
 {
-    // DEBUG ITERATION SPEED
-    // std::filesystem::path path("/Users/jesse/code/nes/roms/donkey_kong.nes");
-    // std::filesystem::path path("/Users/jesse/Documents/wip/nes/NES/nestest.nes");
-    // std::filesystem::path path("/Users/jesse/Documents/wip/nes/NES/nes-test-roms-master/read_joy3/test_buttons.nes");
-    // std::filesystem::path path("/Users/jesse/Documents/wip/nes/NES/nes-test-roms-master/read_joy3/count_errors_fast.nes");
-
-    // start_nes(path);
-    // return;
-    ///////
-
     QString fileName = QFileDialog::getOpenFileName(
         nullptr,
         tr("Select a Nes ROM"),
@@ -56,7 +46,6 @@ void MenuHandler::load_rom()
     {
         start_nes(fileName.toStdString());
     }
-
 }
 
 void MenuHandler::run()

@@ -6,23 +6,6 @@ class Cartridge
 {
     // Parser for the .nes file format type: https://www.nesdev.org/wiki/INES
 public:
-    Cartridge(std::filesystem::path path);
-    Cartridge(std::span<uint8_t> buffer);
-
-    bool valid() const;
-
-    uint8_t read(uint16_t a) const;
-    uint8_t& write(uint16_t a);
-    uint8_t ppu_read(uint16_t a) const;
-
-    void reset();
-
-    bool horizontal_nametable_mirroring() const { return buffer_[6] & 0x01; }
-    bool vertical_nametable_mirroring() const { return !horizontal_nametable_mirroring(); }
-
-    friend std::ostream& operator << (std::ostream& os, const Cartridge &f);
-
-private:
     enum class Format
     {
         Unknown,
@@ -30,8 +13,26 @@ private:
         iNES2
     };
 
-    // Returns true if successful
-    bool parse();
+    // Instantiates a cartridge from the file. Mapper 0 is handeled directly by this class,
+    // other mappers will be derived classes.
+    static std::shared_ptr<Cartridge> create(std::filesystem::path path);
+
+    bool valid() const;
+
+    // Mapper subclasses implement these
+    virtual uint8_t read(uint16_t a) const = 0;
+    virtual uint8_t& write(uint16_t a) = 0;
+    virtual uint8_t ppu_read(uint16_t a) const = 0;
+
+    virtual void reset() = 0;
+
+    bool horizontal_nametable_mirroring() const { return buffer_[6] & 0x01; }
+    bool vertical_nametable_mirroring() const { return !horizontal_nametable_mirroring(); }
+
+    friend std::ostream& operator << (std::ostream& os, const Cartridge &f);
+
+protected:
+    Cartridge(std::shared_ptr<MappedFile> file, Format format);
 
     Format format() const { return format_; }
 
@@ -46,13 +47,8 @@ private:
     bool has_trainer() const;
     bool has_battery() const { return buffer_[6] & 0x02; }
 
-    std::span<uint8_t> cpu_mapping_; // data mapped to 0x8000 - 0xBFFF
-    std::span<uint8_t> ppu_mapping_; // data mapped to 0x0000 - 0x1FFF
-
     std::span<uint8_t> buffer_;
     std::shared_ptr<MappedFile> file_;
-
-    std::array<uint8_t, 0x1000> prg_ram_; // 4kb, mapper 0 @ 0x6000, mirrored to 0x8000
 
     Format format_{Format::Unknown};
 

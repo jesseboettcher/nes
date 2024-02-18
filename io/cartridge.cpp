@@ -4,26 +4,27 @@
 
 #include <glog/logging.h>
 
-Cartridge::Cartridge(std::filesystem::path path)
+class Cartridge_NROM : public Cartridge
 {
-    file_ = MappedFile::open(path.c_str());
+protected:
+    friend class Cartridge;
+    Cartridge_NROM(std::shared_ptr<MappedFile> file, Format format)
+     : Cartridge(file, format) {}
 
-    if (file_)
-    {
-        buffer_ = file_->buffer();
-    }
-    name_ = path.filename().string();
+    uint8_t read(uint16_t a) const override;
+    uint8_t& write(uint16_t a) override;
+    uint8_t ppu_read(uint16_t a) const override;
 
-    parse();
-}
+    void reset() override;
 
-Cartridge::Cartridge(std::span<uint8_t> buffer)
-: buffer_(buffer)
-{
-    parse();
-}
+private:
+    std::span<uint8_t> cpu_mapping_; // data mapped to 0x8000 - 0xBFFF
+    std::span<uint8_t> ppu_mapping_; // data mapped to 0x0000 - 0x1FFF
 
-uint8_t Cartridge::read(uint16_t a) const
+    std::array<uint8_t, 0x1000> prg_ram_; // 4kb, mapper 0 @ 0x6000, mirrored to 0x8000
+};
+
+uint8_t Cartridge_NROM::read(uint16_t a) const
 {
     assert(a >= 0x4020);
 
@@ -45,7 +46,7 @@ uint8_t Cartridge::read(uint16_t a) const
     return cpu_mapping_[a - 0x8000];
 }
 
-uint8_t& Cartridge::write(uint16_t a)
+uint8_t& Cartridge_NROM::write(uint16_t a)
 {
     if (a >= 0x6000 && a < 0x8000)
     {
@@ -57,14 +58,14 @@ uint8_t& Cartridge::write(uint16_t a)
     return dummy;
 }
 
-uint8_t Cartridge::ppu_read(uint16_t a) const
+uint8_t Cartridge_NROM::ppu_read(uint16_t a) const
 {
     assert(a <= 0x2000);
 
     return ppu_mapping_[a];
 }
 
-void Cartridge::reset()
+void Cartridge_NROM::reset()
 {
     if (mapper() == 0)
     {
@@ -83,36 +84,26 @@ void Cartridge::reset()
     assert(false);
 }
 
-bool Cartridge::parse()
+class Cartridge_MMC1 : public Cartridge
 {
-    std::string_view header_constant(reinterpret_cast<char*>(buffer_.data()), 4);
+protected:
+    friend class Cartridge;
+    Cartridge_MMC1(std::shared_ptr<MappedFile> file, Format format)
+     : Cartridge(file, format) {}
 
-    if (!buffer_.size())
-    {
-        return false;
-    }
+    uint8_t read(uint16_t a) const override { return 0; }
+    uint8_t& write(uint16_t a) override { static uint8_t dummy = 0; return dummy; }
+    uint8_t ppu_read(uint16_t a) const override { return 0; }
 
-    // note last character is not a space it is 0x1A, substitute / spacer
-    if (header_constant.starts_with("NES"))
-    {
-        // iNES header
-        if ((buffer_[7] & 0xC0) == 0x80)
-        {
-            format_ = Format::iNES2;
-        }
-        else
-        {
-            format_ = Format::iNES;
-        }
-        // Layout
-        // headers (16 bytes)
-        // trainer (optional, 512 bytes)
-        // prg-rom
-        // chr-rom
-        // misc-rom
-    }
-    LOG(INFO) << *this;
-    return true;
+    void reset() override {}
+};
+
+Cartridge::Cartridge(std::shared_ptr<MappedFile> file, Format format)
+{
+    file_ = file;
+    format_ = format;
+
+    buffer_ = file_->buffer();
 }
 
 bool Cartridge::valid() const
@@ -215,4 +206,66 @@ std::ostream& operator << (std::ostream& os, const Cartridge& f)
     os << "nametable mirroring:\t" << (f.horizontal_nametable_mirroring() ? "horizontal" : "vertical") << std::endl;
 
     return os;
+}
+
+std::shared_ptr<Cartridge> Cartridge::create(std::filesystem::path path)
+{
+    std::shared_ptr<Cartridge> result_cartridge;
+    std::shared_ptr<MappedFile> file = MappedFile::open(path.c_str());
+
+    if (!file)
+    {
+        return result_cartridge;
+    }
+
+    std::span<uint8_t> buffer = file->buffer();
+    std::string_view header_constant(reinterpret_cast<char*>(buffer.data()), 4);
+    Format format = Format::Unknown;
+
+    // note last character is not a space it is 0x1A, substitute / spacer
+    if (header_constant.starts_with("NES"))
+    {
+        // iNES header
+        if ((buffer[7] & 0xC0) == 0x80)
+        {
+            format = Format::iNES2;
+        }
+        else
+        {
+            format = Format::iNES;
+        }
+        // Layout
+        // headers (16 bytes)
+        // trainer (optional, 512 bytes)
+        // prg-rom
+        // chr-rom
+        // misc-rom
+    }
+
+    if (format == Format::Unknown)
+    {
+        return result_cartridge;
+    }
+
+    uint8_t mapper_number = 0;
+    mapper_number |= buffer[6] >> 4;
+    mapper_number |= buffer[7] & 0xF0;
+
+    switch(mapper_number)
+    {
+        case 0:
+            result_cartridge.reset(new Cartridge_NROM(file, format));
+            break;
+
+        case 1:
+            result_cartridge.reset(new Cartridge_MMC1(file, format));
+            break;
+
+        default:
+            LOG(ERROR) << "Unsupported mapper (" << mapper_number << ")";
+            return result_cartridge;
+    }
+    LOG(INFO) << *result_cartridge;
+
+    return result_cartridge;
 }
