@@ -20,7 +20,8 @@ You'll need an installation of QT6 and then update the below instructions with y
 - [x] Donkey Kong playable (ppu sprites)
 - [ ] Ice Hockey Playable (ppu scrolling)
 - [ ] Sound (partially enabled now)
-- [ ] Load Zelda (cartridge mapper 1)
+- [x] Dr Mario (cartridge mapper 1)
+- [ ] Load Zelda (cartridge mapper 1, 8x16 sprites)
 - [x] USB controllers (one player)
 
 # Resources
