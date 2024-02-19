@@ -8,11 +8,11 @@ class Cartridge_NROM : public Cartridge
 {
 protected:
     friend class Cartridge;
-    Cartridge_NROM(std::shared_ptr<MappedFile> file, Format format)
-     : Cartridge(file, format) {}
+    Cartridge_NROM(std::shared_ptr<MappedFile> file, Format format, std::string_view name)
+     : Cartridge(file, format, name) {}
 
     uint8_t read(uint16_t a) const override;
-    uint8_t& write(uint16_t a) override;
+    void write(uint16_t a, uint8_t v) override;
     uint8_t ppu_read(uint16_t a) const override;
 
     void reset() override;
@@ -46,16 +46,13 @@ uint8_t Cartridge_NROM::read(uint16_t a) const
     return cpu_mapping_[a - 0x8000];
 }
 
-uint8_t& Cartridge_NROM::write(uint16_t a)
+void Cartridge_NROM::write(uint16_t a, uint8_t v)
 {
     if (a >= 0x6000 && a < 0x8000)
     {
-        return prg_ram_[a % 0x1000];
+        prg_ram_[a % 0x1000] = v;
     }
     assert(false);
-
-    static uint8_t dummy = 0;
-    return dummy;
 }
 
 uint8_t Cartridge_NROM::ppu_read(uint16_t a) const
@@ -69,11 +66,11 @@ void Cartridge_NROM::reset()
 {
     if (mapper() == 0)
     {
-        cpu_mapping_ = prg_rom();
+        cpu_mapping_ = prg_rom(0, sizeof_prg_rom());
 
-        if (chr_rom())
+        if (chr_rom(0, sizeof_chr_rom()))
         {
-            ppu_mapping_ = chr_rom().value();
+            ppu_mapping_ = chr_rom(0, sizeof_chr_rom()).value();
         }
         return;
     }
@@ -88,20 +85,184 @@ class Cartridge_MMC1 : public Cartridge
 {
 protected:
     friend class Cartridge;
-    Cartridge_MMC1(std::shared_ptr<MappedFile> file, Format format)
-     : Cartridge(file, format) {}
+    Cartridge_MMC1(std::shared_ptr<MappedFile> file, Format format, std::string_view name)
+     : Cartridge(file, format, name) {}
 
-    uint8_t read(uint16_t a) const override { return 0; }
-    uint8_t& write(uint16_t a) override { static uint8_t dummy = 0; return dummy; }
-    uint8_t ppu_read(uint16_t a) const override { return 0; }
+    uint8_t read(uint16_t a) const override;
+    void write(uint16_t a, uint8_t v) override;
+    uint8_t ppu_read(uint16_t a) const override;
 
-    void reset() override {}
+    void reset() override;
+
+private:
+    int32_t load_write_count_{0};
+    uint8_t load_register_{0};
+    uint8_t control_register_{0};
+    uint8_t chr_bank0_register_{0};
+    uint8_t chr_bank1_register_{0};
+    uint8_t pgr_bank_register_{0};
+
+    std::span<uint8_t> chr_bank0_;
+    std::span<uint8_t> chr_bank1_;
+
+    std::span<uint8_t> prg_bank0_;
+    std::span<uint8_t> prg_bank1_;
+
+    std::array<uint8_t, 0x2000> chr_ram_;
+    std::array<uint8_t, 0x1000> prg_ram_; // 4kb, mapper 0 @ 0x6000, mirrored to 0x8000
 };
 
-Cartridge::Cartridge(std::shared_ptr<MappedFile> file, Format format)
+uint8_t Cartridge_MMC1::read(uint16_t a) const
+{
+    if (a < 0x6000)
+    {
+        return 0;
+    }
+
+    if (a >= 0x6000 && a < 0x8000)
+    {
+        return prg_ram_[a % 0x1000];
+    }
+
+    if (a >= 0x8000 && a < 0x8000 + prg_bank0_.size())
+    {
+        return prg_bank0_[a - 0x8000];
+    }
+    else if (a >= 0xC000)
+    {
+        return prg_bank1_[a - 0xC000];
+    }
+    return 0;
+}
+
+void Cartridge_MMC1::write(uint16_t a, uint8_t v)
+{
+    if (a < 0x2000)
+    {
+        assert(has_chr_ram());
+
+        chr_ram_[a] = v;
+    }
+
+    if (a >= 0x8000 && a <= 0xFFFF)
+    {
+        if (v & 0x80) // clear shift register
+        {
+            load_register_ = 0;
+            load_write_count_ = 0;
+            return;
+        }
+        load_register_ = load_register_ >> 1;
+        load_register_ |= (v & 0x01) << 4;
+        load_write_count_++;
+
+        if (load_write_count_ == 5)
+        {
+            LOG(INFO) << "mmc1 load register " << std::hex << +load_register_ << " address " << a;
+            if (a < 0xA000) // control register
+            {
+                control_register_ = load_register_;
+            }
+            else if (a < 0xC000) // chr bank 0 register
+            {
+                if (!has_chr_ram())
+                {
+                    int32_t bank_size = control_register_ & 0x10 ? 0x1000 : 0x2000;
+                    chr_bank0_register_ = load_register_;
+
+                    chr_bank0_ = chr_rom(chr_bank0_register_ * bank_size, bank_size).value();
+                }
+            }
+            else if (a < 0xE000) // chr bank 1 register
+            {
+                assert(!has_chr_ram());
+                chr_bank1_register_ = load_register_;
+
+                if (control_register_ & 0x10)
+                {
+                    int32_t bank_size = 0x1000;
+
+                    chr_bank1_ = chr_rom(chr_bank1_register_ * bank_size, bank_size).value();
+                }
+                else
+                {
+                    chr_bank1_ = std::span<uint8_t>();
+                }
+            }
+            else // prg bank register
+            {
+                pgr_bank_register_ = load_register_;
+
+                switch ((control_register_ >> 2) & 0x03)
+                {
+                    case 0:
+                    case 1:
+                    {
+                        int32_t bank_size = 0x8000;
+                        prg_bank0_ = prg_rom(pgr_bank_register_ * bank_size, bank_size);
+                        break;
+                    }
+
+                    case 3:
+                    {
+                        int32_t bank_size = 0x4000;
+                        prg_bank0_ = prg_rom(pgr_bank_register_ * bank_size, bank_size);
+                        break;
+                    }
+
+                    case 4:
+                    {
+                        int32_t bank_size = 0x4000;
+                        prg_bank0_ = prg_rom(pgr_bank_register_ * bank_size, bank_size);
+                        break;
+                    }
+                }
+            }
+            load_register_ = 0;
+            load_write_count_ = 0;
+        }
+    }
+}
+
+uint8_t Cartridge_MMC1::ppu_read(uint16_t a) const
+{
+    assert(a <= 0x2000);
+
+    if (a < chr_bank0_.size())
+    {
+        return chr_bank0_[a];
+    }
+
+    return chr_bank1_[a - 0x1000];
+}
+
+void Cartridge_MMC1::reset()
+{
+    uint32_t header_size = 16;
+    uint32_t trainer_size = has_trainer() ? 512 : 0;
+    uint32_t prg_rom_size = sizeof_prg_rom();
+    prg_bank0_ = std::span<uint8_t>(&buffer_[header_size + trainer_size], 0x4000); // first 16kb of prg
+    prg_bank1_ = std::span<uint8_t>(&buffer_[header_size + trainer_size + prg_rom_size - 0x4000], 0x4000); // last 16kb of prg
+
+    uint32_t chr_rom_size = sizeof_chr_rom();
+
+    if (chr_rom_size == 0)
+    {
+        assert(has_chr_ram());
+
+        chr_bank0_ = std::span<uint8_t>(chr_ram_.data(), chr_ram_.size()); // 8kb
+    }
+    else
+    {
+        chr_bank0_ = std::span<uint8_t>(&buffer_[header_size + trainer_size + prg_rom_size], 0x2000); // 8kb
+    }
+}
+
+Cartridge::Cartridge(std::shared_ptr<MappedFile> file, Format format, std::string_view name)
 {
     file_ = file;
     format_ = format;
+    name_ = name;
 
     buffer_ = file_->buffer();
 }
@@ -162,15 +323,14 @@ uint32_t Cartridge::sizeof_chr_rom() const
     return size * 8 * 1024;
 }
 
-std::span<uint8_t> Cartridge::prg_rom() const
+std::span<uint8_t> Cartridge::prg_rom(int32_t bank_offset, int32_t size) const
 {
     uint32_t header_size = 16;
     uint32_t trainer_size = has_trainer() ? 512 : 0;
-    uint32_t prg_rom_size = sizeof_prg_rom();
-    return std::span<uint8_t>(&buffer_[header_size + trainer_size], prg_rom_size);
+    return std::span<uint8_t>(&buffer_[header_size + trainer_size + bank_offset], size);
 }
 
-std::optional<std::span<uint8_t>> Cartridge::chr_rom() const
+std::optional<std::span<uint8_t>> Cartridge::chr_rom(int32_t bank_offset, int32_t size) const
 {
     uint32_t header_size = 16;
     uint32_t chr_rom_size = sizeof_chr_rom();
@@ -181,7 +341,7 @@ std::optional<std::span<uint8_t>> Cartridge::chr_rom() const
     {
         return std::nullopt;
     }
-    return std::span<uint8_t>(&buffer_[header_size + trainer_size + prg_rom_size], chr_rom_size);
+    return std::span<uint8_t>(&buffer_[header_size + trainer_size + prg_rom_size + bank_offset], size);
 }
 
 bool Cartridge::has_trainer() const
@@ -254,11 +414,11 @@ std::shared_ptr<Cartridge> Cartridge::create(std::filesystem::path path)
     switch(mapper_number)
     {
         case 0:
-            result_cartridge.reset(new Cartridge_NROM(file, format));
+            result_cartridge.reset(new Cartridge_NROM(file, format, path.filename().string()));
             break;
 
         case 1:
-            result_cartridge.reset(new Cartridge_MMC1(file, format));
+            result_cartridge.reset(new Cartridge_MMC1(file, format, path.filename().string()));
             break;
 
         default:

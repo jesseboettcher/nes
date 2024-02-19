@@ -61,12 +61,14 @@ void AddressBus::write(int32_t a, uint8_t value)
         {
             joypads_->write(a) = value;
         }
-        if (a == 0x4014) // OAM DMA
+        else if (a == 0x4014) // OAM DMA
         {
             ppu_->write_register(a) = value;
         }
-
-        apu_->write_register(a) = value;
+        else
+        {
+            apu_->write_register(a) = value;
+        }
     }
     else if (a <= 0x401F) // disabled APU, IO functions
     {
@@ -74,8 +76,6 @@ void AddressBus::write(int32_t a, uint8_t value)
     }
     else
     {
-        cartridge_->write(a) = value;
+        cartridge_->write(a, value);
     }
-
-    assert(false);
 }

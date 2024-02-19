@@ -416,7 +416,7 @@ void NesPPU::handle_ppu_data_register()
         LOG_IF(ERROR, ppu_addr_write_count % 2 != 0) << "Error: "
                 << " write to PPUDATA without a fully set PPUADDR";
 
-        ppu_address_bus_.write(ppu_data_addr_) = registers_[PPUDATA];
+        ppu_address_bus_.write(ppu_data_addr_, registers_[PPUDATA]);
         ppu_data_addr_ += ppu_addr_increment_amount();
     }
 }

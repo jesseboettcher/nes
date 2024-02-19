@@ -54,39 +54,27 @@ public:
     }
 
     // returns reference to memory to be written
-    uint8_t& write(int32_t a)
+    void write(int32_t a, uint8_t v)
     {
         assert(a >= 0 && a < ADDRESSABLE_MEMORY_SIZE);
 
         if (a < 0x2000) // cartridge
         {
-            assert(false);
-            static uint8_t cartridge_nope = 0;
-            return cartridge_nope;
+            cartridge_->write(a, v);
         }
         else if (a <= 0x3EFF) // video memory
         {
-            return ppu_->write(handle_nametable_mirroring(a, vertical_mirroring_));
+            ppu_->write(handle_nametable_mirroring(a, vertical_mirroring_)) = v;
         }
         else if (a >= 0x3F00 && a < 0x4000) // Palette RAM indices
         {
-            // return palette_ram_[(a - 0x3F00) % 0x20];
-            return ppu_->write_palette_ram((a - 0x3F00) % 0x20);
+            ppu_->write_palette_ram((a - 0x3F00) % 0x20) = v;
         }
-
-        assert(false);
-        static uint8_t dummy = 0;
-        return dummy;
     }
 
     const uint8_t operator [] (int i) const
     {
         return read(i);
-    }
-
-    uint8_t& operator [] (int i)
-    {
-        return write(i);
     }
 
     const View view(uint16_t address, uint16_t size) const

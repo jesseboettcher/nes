@@ -77,11 +77,6 @@ public:
         return read(i);
     }
 
-    // uint8_t& operator [] (int32_t i)
-    // {
-    //     return write(i);
-    // }
-
     const View view(int32_t address, int32_t size) const
     {
         if (address + size > ADDRESSABLE_MEMORY_SIZE)
