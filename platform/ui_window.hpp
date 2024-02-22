@@ -1,5 +1,7 @@
 #pragma once
 
+#include "io/display.hpp"
+
 #include <QMainWindow>
 #include <QQuickWindow>
 
@@ -40,6 +42,40 @@ private:
     std::optional<std::function<void()>> close_callback_;
 };
 
+class AspectRatioEventFilter : public QObject
+{
+public:
+    AspectRatioEventFilter(qreal ratio, QObject* parent = nullptr)
+     : QObject(parent)
+     , aspect_ratio(ratio) {}
+
+protected:
+    qreal aspect_ratio; // Desired aspect ratio
+
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Resize && watched->isWidgetType())
+        {
+            QWidget* widget = static_cast<QWidget*>(watched);
+            QSize size = widget->size();
+            int new_width = size.width();
+            int new_height = static_cast<int>(new_width / aspect_ratio);
+
+            // Adjust height to maintain aspect ratio without exceeding the window's maximum height
+            if (new_height > widget->maximumHeight())
+            {
+                new_height = widget->maximumHeight();
+                new_width = static_cast<int>(new_height * aspect_ratio);
+            }
+
+            widget->resize(new_width, new_height);
+            return true;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
+
 class UIMainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -49,7 +85,8 @@ public:
     UIMainWindow()
      : QMainWindow()
     {
-
+        AspectRatioEventFilter* filter = new AspectRatioEventFilter((qreal)NesDisplay::WIDTH / (qreal)NesDisplay::HEIGHT, this);
+        installEventFilter(filter);
     }
 
     void set_close_callback(std::function<void()> close_callback)

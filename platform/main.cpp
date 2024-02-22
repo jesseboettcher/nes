@@ -57,7 +57,7 @@ void create_windows()
     ui.main_window = new UIMainWindow;
 
     ui.main_window->setWindowTitle(QObject::tr("Nintendo Entertainment System"));
-    ui.main_window->resize(512, 480);
+    ui.main_window->resize(1024, 960);
     ui.main_window->show();
 
     ui.main_window->set_close_callback(close_main_callback);
@@ -114,6 +114,11 @@ void create_windows()
 
     // make sure main is activated, to get all the keyboard input
     ui.main_window->activateWindow();
+
+    // close the debug windows
+    ui.registers_window->close();
+    ui.memory_window->close();
+    // UIContext::instance().sprites_window->close();
 }
 
 void create_menus()

@@ -69,6 +69,14 @@ void NesDisplayView::paint(QPainter *painter)
     // TODO get instance of NesDisplay and retrieve buffer from it
     // TODO time this and look at more efficient options
 
+    qreal scaleFactorX = this->window()->width() / this->window()->devicePixelRatio() / NesDisplay::WIDTH;
+    qreal scaleFactorY = this->window()->height() / this->window()->devicePixelRatio() / NesDisplay::HEIGHT;
+
+    qreal scaleFactor = qMin(scaleFactorX, scaleFactorY);
+
+    painter->save();
+    painter->scale(scaleFactor, scaleFactor); // Scale the painter
+
     QImage image((const uchar*)global_display_ptr->display_buffer(),
                  NesDisplay::WIDTH, NesDisplay::HEIGHT,
                  QImage::Format_RGBA8888);
@@ -76,4 +84,6 @@ void NesDisplayView::paint(QPainter *painter)
     painter->drawPixmap(0, 0, NesDisplay::WIDTH * 2, NesDisplay::HEIGHT * 2, // dest rect
                         QPixmap::fromImage(image),
                         0, 0,NesDisplay::WIDTH, NesDisplay::HEIGHT); // source rect
+
+    painter->restore();
 }

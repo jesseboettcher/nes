@@ -4,8 +4,7 @@ import com.boettcher.jesse 0.1
 
 Item
 {
-    width: 512
-    height: 480
+    anchors.fill: parent
 
     property var elements: [
         dimming_rect
