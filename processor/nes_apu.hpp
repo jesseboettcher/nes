@@ -116,14 +116,19 @@ private:
     bool get_period(uint8_t r);
     bool get_negate(uint8_t r);
     bool get_shift(uint8_t r);
-    int16_t get_frequency(uint8_t r1, uint8_t r2);
+    int16_t get_square_pulse_frequency(uint8_t r1, uint8_t r2);
+    int16_t get_triangle_frequency(uint8_t r1, uint8_t r2);
     int16_t get_length_counter(uint8_t r);
+    bool get_length_counter_halt(uint8_t r);
     uint16_t get_frame_counter_mode_steps(uint8_t r);
+    int32_t get_linear_counter_load(uint8_t r);
+    bool get_linear_counter_halt(uint8_t r);
 
     Registers registers_;
     int32_t steps_per_frame_{4};
     int32_t cycles_per_step_{0};
-    uint64_t frame_counter_steps_{0};
+    uint64_t frame_steps_{0};
+    uint64_t frame_count_{0};
 
     AudioPlayer player_;
     std::array<Audio::Parameters, magic_enum::enum_count<Audio::Channel>()> params_;

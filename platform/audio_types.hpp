@@ -24,6 +24,8 @@ struct Parameters
     float duty_cycle; // square waves only
     bool loop{false};
 
+    int32_t linear_counter_load{0};
+
     bool sweep_enabled{false};
     int32_t sweep_period{0};
     bool sweep_negate{false};

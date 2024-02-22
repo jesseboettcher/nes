@@ -12,6 +12,7 @@ CMakeLists.txt.*
 
 # Local test files
 roms/
+venv/
 
 # Prerequisites
 *.d

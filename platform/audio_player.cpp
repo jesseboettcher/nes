@@ -1,5 +1,6 @@
 #include "platform/audio_player.hpp"
 
+#include "config/flags.hpp"
 #include "lib/magic_enum.hpp"
 
 #include <glog/logging.h>
@@ -16,10 +17,35 @@ AudioPlayer::AudioPlayer()
 
     generator_ = std::make_shared<Generator>(format);   
     audio_sink_ = std::make_shared<QAudioSink>(device, format);
+
+    if constexpr (ENABLE_APU_PARAMETERS_LOGGING)
+    {
+        std::string path = std::string("/tmp/") +
+                           "nes_audio_parameters" +
+                           std::string(".log");
+        std::filesystem::remove(path);
+        log_.open(path);
+        if (!log_.is_open())
+        {
+            LOG(WARNING) << "Could not write " << path;
+        }
+    }
 }
 
 void AudioPlayer::update_parameters(Audio::Channel channel, Audio::Parameters params, bool reset_phase)
 {
+    if constexpr (ENABLE_APU_PARAMETERS_LOGGING)
+    {
+        log_ << magic_enum::enum_name<Audio::Channel>(channel) << " "
+             << "cycle " << audio_player_cycles_ << " "
+             << "freq " << params.frequency << " "
+             << "duty " << params.duty_cycle << " "
+             << "volume " << params.volume << " "
+             << "counter " << params.counter << " "
+             << "constant_vol " << +params.constant_volume << " "
+             << "linear_counter " << params.linear_counter_load << std::endl;
+    }
+
     // LOG(INFO) << "AudioPlayer update_parameters " << magic_enum::enum_name<Audio::Channel>(channel) << " "
     //           << " reset phase " << +reset_phase << " "
     //           << "freq " << params.frequency << " "
@@ -46,9 +72,19 @@ void AudioPlayer::decrement_counter(Audio::Channel channel)
     generator_->decrement_counter(channel);
 }
 
+void AudioPlayer::decrement_linear_counter()
+{
+    generator_->decrement_linear_counter();
+}
+
 void AudioPlayer::decrement_volume_envelope(Audio::Channel channel)
 {
     generator_->decrement_volume_envelope(channel);
+}
+
+void AudioPlayer::step_sweep(Audio::Channel channel)
+{
+    generator_->step_sweep(channel);
 }
 
 void AudioPlayer::start()
@@ -77,6 +113,7 @@ void AudioPlayer::reset()
 
 void AudioPlayer::step()
 {
+    audio_player_cycles_++;
     generator_->step();
 }
 

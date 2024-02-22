@@ -6,32 +6,40 @@
 
 int32_t get_cycles_per_frame_step(int32_t steps_per_frame)
 {
-    // 894886 cycles per second (run every other cpu cycle)
-    return 894886 / (60 * steps_per_frame);
+    // master clock ticks -> 21477272 @ 21.477272 MHz
+    return 21477272 / (60 * steps_per_frame);
 }
 
 int32_t get_cycles_per_frame()
 {
-    // 894886 cycles per second (run every other cpu cycle)
-    return 894886 / 60;
+    // master clock ticks -> 21477272 @ 21.477272 MHz
+    return 21477272 / 60;
 }
 
 NesAPU::NesAPU()
 {
-    cycles_per_step_ = get_cycles_per_frame_step(steps_per_frame_);
-
     LOG(INFO) << "NesAPU created";
 
-    for (auto channel : magic_enum::enum_values<Audio::Channel>())
-    {
-        params_[to_index(channel)].channel = channel;
-
-    }
+    reset();
 }
 
 void NesAPU::reset()
 {
     registers_.clear();
+
+    steps_per_frame_ = 4;
+    cycles_per_step_ = get_cycles_per_frame_step(steps_per_frame_);
+
+    frame_count_ = 0;
+    frame_steps_ = 0;
+
+    cycles_ = 0;
+
+    for (auto channel : magic_enum::enum_values<Audio::Channel>())
+    {
+        params_[to_index(channel)] = Audio::Parameters();
+        params_[to_index(channel)].channel = channel;
+    }
 }
 
 
@@ -62,7 +70,7 @@ int32_t length_counter_lookup(int16_t v)
     return low_lookup[v & 0x000F];
 }
 
-void NesAPU::step(uint64_t clock_ticks)
+void NesAPU::step(uint64_t clock_ticks) // master clock ticks -> 21477272 @ 21.477272 MHz
 {
     cycles_++;
 
@@ -72,33 +80,54 @@ void NesAPU::step(uint64_t clock_ticks)
     //  - l - l    - l - - l    Length counter and sweep
     //  e e e e    e e e - e    Envelope and linear counter
 
-    if (clock_ticks % cycles_per_step_ == 0)
+    if (clock_ticks / cycles_per_step_ > frame_steps_)
     {
-        frame_counter_steps_++;
+        frame_steps_++;
 
-        int32_t local_step = frame_counter_steps_ % steps_per_frame_;
+        int32_t current_frame_step = frame_steps_ % steps_per_frame_;
 
         // Decrement counters
-        if (local_step == 1 ||
-            (local_step == 3 && steps_per_frame_ == 4) ||
-            (local_step == 4 && steps_per_frame_ == 5))
+        if (current_frame_step == 1 ||
+            (current_frame_step == 3 && steps_per_frame_ == 4) ||
+            (current_frame_step == 4 && steps_per_frame_ == 5))
         {
             // update length, sweep
-            // TODO only if active
-            player_.decrement_counter(Audio::Channel::Square_Pulse_1);
-            player_.decrement_counter(Audio::Channel::Square_Pulse_2);
-            player_.decrement_counter(Audio::Channel::Triangle);
+            if (!get_length_counter_halt(registers_[PULSE1_REG1]))
+            {
+                player_.decrement_counter(Audio::Channel::Square_Pulse_1);
+            }
+            if (!get_length_counter_halt(registers_[PULSE2_REG1]))
+            {
+                player_.decrement_counter(Audio::Channel::Square_Pulse_2);
+            }
+            if (!get_linear_counter_halt(registers_[TRIANGLE_REG1]))
+            {
+                player_.decrement_counter(Audio::Channel::Triangle);
+            }
             player_.decrement_counter(Audio::Channel::Noise);
+
+            if (get_sweep_enabled(registers_[PULSE1_REG2]))
+            {
+                player_.step_sweep(Audio::Channel::Square_Pulse_1);
+            }
+            if (get_sweep_enabled(registers_[PULSE2_REG2]))
+            {
+                player_.step_sweep(Audio::Channel::Square_Pulse_2);
+            }
         }
 
         // Decrement volume envelopes
-        if (steps_per_frame_ == 4 || (steps_per_frame_ == 5 && local_step != 3))
+        if (steps_per_frame_ == 4 || (steps_per_frame_ == 5 && current_frame_step != 3))
         {
-            if (!get_constant_volume(registers_[PULSE1_REG1]))
+            if (!get_linear_counter_halt(registers_[TRIANGLE_REG1]))
+            {
+                player_.decrement_linear_counter();
+            }
+            // if (!get_constant_volume(registers_[PULSE1_REG1]))
             {
                 player_.decrement_volume_envelope(Audio::Channel::Square_Pulse_1);
             }
-            if (!get_constant_volume(registers_[PULSE2_REG1]))
+            // if (!get_constant_volume(registers_[PULSE2_REG1]))
             {
                 player_.decrement_volume_envelope(Audio::Channel::Square_Pulse_2);
             }
@@ -123,7 +152,7 @@ void NesAPU::step(uint64_t clock_ticks)
         if (registers_.had_write(PULSE1_REG3))
         {
             params_[to_index(Audio::Channel::Square_Pulse_1)].frequency =
-                                    get_frequency(registers_[PULSE1_REG3], registers_[PULSE1_REG4]);
+                                    get_square_pulse_frequency(registers_[PULSE1_REG3], registers_[PULSE1_REG4]);
 
             player_.update_parameters(Audio::Channel::Square_Pulse_1,
                                       params_[to_index(Audio::Channel::Square_Pulse_1)], false);
@@ -131,7 +160,7 @@ void NesAPU::step(uint64_t clock_ticks)
         if (registers_.had_write(PULSE1_REG4))
         {
             params_[to_index(Audio::Channel::Square_Pulse_1)].frequency =
-                                    get_frequency(registers_[PULSE1_REG3], registers_[PULSE1_REG4]);
+                                    get_square_pulse_frequency(registers_[PULSE1_REG3], registers_[PULSE1_REG4]);
 
             params_[to_index(Audio::Channel::Square_Pulse_1)].counter =
                                 length_counter_lookup(get_length_counter(registers_[PULSE1_REG4]));
@@ -158,7 +187,7 @@ void NesAPU::step(uint64_t clock_ticks)
         if (registers_.had_write(PULSE2_REG3))
         {
             params_[to_index(Audio::Channel::Square_Pulse_2)].frequency =
-                                    get_frequency(registers_[PULSE1_REG3], registers_[PULSE1_REG4]);
+                                    get_square_pulse_frequency(registers_[PULSE1_REG3], registers_[PULSE1_REG4]);
 
             player_.update_parameters(Audio::Channel::Square_Pulse_2,
                                       params_[to_index(Audio::Channel::Square_Pulse_2)], false);
@@ -166,7 +195,7 @@ void NesAPU::step(uint64_t clock_ticks)
         if (registers_.had_write(PULSE2_REG4))
         {
             params_[to_index(Audio::Channel::Square_Pulse_2)].frequency =
-                                    get_frequency(registers_[PULSE2_REG3], registers_[PULSE2_REG4]);
+                                    get_square_pulse_frequency(registers_[PULSE2_REG3], registers_[PULSE2_REG4]);
 
             params_[to_index(Audio::Channel::Square_Pulse_2)].counter =
                                 length_counter_lookup(get_length_counter(registers_[PULSE2_REG4]));
@@ -178,7 +207,7 @@ void NesAPU::step(uint64_t clock_ticks)
         // Triangle
         if (registers_.had_write(TRIANGLE_REG1))
         {
-
+            // linear counter loaded on write to reg4
         }
         if (registers_.had_write(TRIANGLE_REG2))
         {
@@ -187,7 +216,7 @@ void NesAPU::step(uint64_t clock_ticks)
         if (registers_.had_write(TRIANGLE_REG3))
         {
             params_[to_index(Audio::Channel::Triangle)].frequency =
-                                    get_frequency(registers_[TRIANGLE_REG3], registers_[TRIANGLE_REG4]) / 2;
+                                    get_triangle_frequency(registers_[TRIANGLE_REG3], registers_[TRIANGLE_REG4]);
 
             player_.update_parameters(Audio::Channel::Triangle,
                                       params_[to_index(Audio::Channel::Triangle)], false);
@@ -195,13 +224,60 @@ void NesAPU::step(uint64_t clock_ticks)
         if (registers_.had_write(TRIANGLE_REG4))
         {
             params_[to_index(Audio::Channel::Triangle)].frequency =
-                                    get_frequency(registers_[TRIANGLE_REG3], registers_[TRIANGLE_REG4]) / 2;
+                                    get_triangle_frequency(registers_[TRIANGLE_REG3], registers_[TRIANGLE_REG4]);
 
             params_[to_index(Audio::Channel::Triangle)].counter =
                                 length_counter_lookup(get_length_counter(registers_[TRIANGLE_REG4]));
 
+            // TODO should take affect 1 cycle later
+            if (!get_linear_counter_halt(registers_[TRIANGLE_REG1]))
+            {
+                params_[to_index(Audio::Channel::Triangle)].linear_counter_load =
+                                        get_linear_counter_load(registers_[TRIANGLE_REG1]);
+            }
+
             player_.update_parameters(Audio::Channel::Triangle,
                                       params_[to_index(Audio::Channel::Triangle)], true);
+        }
+
+        // Noise
+        if (registers_.had_write(NOISE_REG1))
+        {
+
+        }
+        if (registers_.had_write(NOISE_REG2))
+        {
+
+        }
+
+        if (registers_.had_write(NOISE_REG3))
+        {
+
+        }
+
+        if (registers_.had_write(NOISE_REG4))
+        {
+            // LOG(INFO) << "write NOISE reg 4";
+        }
+
+        // DMC (delta modulation channel)
+        if (registers_.had_write(DMC_REG1))
+        {
+
+        }
+        if (registers_.had_write(DMC_REG2))
+        {
+
+        }
+
+        if (registers_.had_write(DMC_REG3))
+        {
+
+        }
+
+        if (registers_.had_write(DMC_REG4))
+        {
+            // LOG(INFO) << "write DMC reg 4";
         }
 
         // Status register for channel enable/disable
@@ -219,12 +295,12 @@ void NesAPU::step(uint64_t clock_ticks)
         }
 
         registers_.clear_write_flags();
-
     }
 
     // Push samples to output buffer
-    if (clock_ticks % get_cycles_per_frame() == 0)
+    if (clock_ticks / get_cycles_per_frame() > frame_count_)
     {
+        frame_count_++;
         player_.step();
     }
 }
@@ -301,7 +377,7 @@ bool NesAPU::get_period(uint8_t r)
 
 bool NesAPU::get_negate(uint8_t r)
 {
-    return (r & 0x08) >> 3;
+    return r & 0x08;
 }
 
 bool NesAPU::get_shift(uint8_t r)
@@ -309,17 +385,35 @@ bool NesAPU::get_shift(uint8_t r)
     return r & 0x07;
 }
 
-int16_t NesAPU::get_frequency(uint8_t r1, uint8_t r2)
+int16_t NesAPU::get_square_pulse_frequency(uint8_t r1, uint8_t r2)
 {
     static constexpr int32_t CLOCK_FREQ = 1789773;
     int32_t timer = ((r2 & 0x03) << 8) | r1;
 
+    if (timer < 8)
+    {
+        return 0; // channel should be silenced
+    }
+
     return CLOCK_FREQ / (16 * (timer + 1));
+}
+
+int16_t NesAPU::get_triangle_frequency(uint8_t r1, uint8_t r2)
+{
+    static constexpr int32_t CLOCK_FREQ = 1789773;
+    int32_t timer = ((r2 & 0x03) << 8) | r1;
+
+    return CLOCK_FREQ / (32 * (timer + 1));
 }
 
 int16_t NesAPU::get_length_counter(uint8_t r)
 {
     return r >> 3;
+}
+
+bool NesAPU::get_length_counter_halt(uint8_t r)
+{
+    return r & 0x20;
 }
 
 uint16_t NesAPU::get_frame_counter_mode_steps(uint8_t r)
@@ -329,4 +423,14 @@ uint16_t NesAPU::get_frame_counter_mode_steps(uint8_t r)
         return 4;
     }
     return 5;
+}
+
+int32_t NesAPU::get_linear_counter_load(uint8_t r)
+{
+    return r & 0x7F;
+}
+
+bool NesAPU::get_linear_counter_halt(uint8_t r)
+{
+    return r & 0x80;
 }

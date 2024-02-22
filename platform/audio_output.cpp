@@ -13,8 +13,12 @@ static constexpr bool VERBOSE = false;
 class Waveform
 {
 public:
-    virtual void set_frequency(int32_t frequency, float duty, bool reset_phase) { }
+    virtual void set_frequency(int32_t frequency, float duty = 0.0) { }
     virtual int16_t read_sample() { return 0; }
+    virtual int16_t frequency() { return 0; }
+
+    // will return frequency or the pending frequency if a new frequency hasn't been applied yet
+    virtual int16_t target_frequency() { return 0; }
 };
 
 class SquareWave : public Waveform
@@ -25,28 +29,29 @@ public:
     {
         max_value_ = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * 1);
 
-        set_frequency(frequency, duty, true);
+        set_frequency(frequency, duty);
     }
 
-    void set_frequency(int32_t frequency, float duty, bool reset_phase) override
+    void set_frequency(int32_t frequency, float duty) override
     {
-        if (reset_phase)
+        pending_update_ = std::make_pair(frequency, duty);
+    }
+
+    int16_t frequency() override { return frequency_; }
+
+    int16_t target_frequency() override
+    {
+        if (pending_update_)
         {
-            sample_number_ = 0;
+            return pending_update_.value().first;
         }
-        frequency_ = frequency;
-        duty_ = duty;
-        sample_number_ = 0;
-
-        int32_t usec_per_period = 1000000 / (frequency_ * 2);
-
-        samples_per_period_ = format_.bytesForDuration(usec_per_period) / format_.bytesPerSample();
-
-        samples_hi_per_period_ = samples_per_period_ * std::abs(duty_);
+        return frequency_;
     }
 
     int16_t read_sample() override
     {
+        check_apply_pending_updates();
+
         int32_t sample = max_value_;
 
         if ((sample_number_++ % samples_per_period_) > samples_hi_per_period_)
@@ -63,6 +68,26 @@ public:
     }
 
 private:
+    void check_apply_pending_updates()
+    {
+        if (sample_number_ != samples_per_period_ || pending_update_ == std::nullopt)
+        {
+            return;
+        }
+
+        if (pending_update_.value().second != 0.0)
+        {
+            duty_ = pending_update_.value().second;
+        }
+        frequency_ = pending_update_.value().first;
+        sample_number_ = 0;
+
+        int32_t usec_per_period = 1000000 / (frequency_ * 2);
+
+        samples_per_period_ = format_.bytesForDuration(usec_per_period) / format_.bytesPerSample();
+        samples_hi_per_period_ = samples_per_period_ * std::abs(duty_);
+    }
+
     QAudioFormat format_;
 
     int16_t max_value_{0};
@@ -72,6 +97,8 @@ private:
     int32_t samples_per_period_{0};
     int32_t samples_hi_per_period_{0};
     float duty_{0.0};
+
+    std::optional<std::pair<int32_t, float>> pending_update_;
 };
 
 class TriangleWave : public Waveform
@@ -82,13 +109,15 @@ public:
     TriangleWave(const QAudioFormat &format, int32_t frequency)
      : format_(format)
     {
-        max_value_ = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * .8);
+        max_value_ = static_cast<int16_t>(std::numeric_limits<int16_t>::max() * .6);
 
-        set_frequency(frequency, 0, false);
+        set_frequency(frequency, 0);
+        check_apply_pending_updates();
     }
 
-    void set_frequency(int32_t frequency, float, bool) override
+    void set_frequency(int32_t frequency, float) override
     {
+        pending_update_ = frequency;
         frequency_ = frequency;
 
         int32_t usec_per_period = 1000000 / (frequency_ * 2);
@@ -97,8 +126,12 @@ public:
         samples_per_triangle_step_ = samples_per_period_ / MAX_TRIANGLE_STEPS;
     }
 
+    int16_t frequency() override { return frequency_; }
+
     int16_t read_sample() override
     {
+        check_apply_pending_updates();
+
         int32_t current_triangle_step = (sample_number_++ / samples_per_triangle_step_) % MAX_TRIANGLE_STEPS;
         if (current_triangle_step >= MAX_TRIANGLE_STEPS / 2)
         {
@@ -112,14 +145,31 @@ public:
     }
 
 private:
+    void check_apply_pending_updates()
+    {
+        if (sample_number_ != samples_per_period_ || pending_update_ <= 0)
+        {
+            return;
+        }
+
+        frequency_ = pending_update_;
+
+        int32_t usec_per_period = 1000000 / (frequency_ * 2);
+        samples_per_period_ = format_.bytesForDuration(usec_per_period) / format_.bytesPerSample();
+
+        samples_per_triangle_step_ = samples_per_period_ / MAX_TRIANGLE_STEPS;
+    }
+
     QAudioFormat format_;
 
     int16_t max_value_{0};
 
     int64_t sample_number_{0};
-    int32_t frequency_{-1};
+    int32_t frequency_{0};
     int32_t samples_per_period_{0};
     int32_t samples_per_triangle_step_;
+
+    int32_t pending_update_{0};
 };
 
 Generator::Generator(const QAudioFormat &format)
@@ -128,7 +178,8 @@ Generator::Generator(const QAudioFormat &format)
 {
     assert(QAudioFormat::Int16 == format.sampleFormat());
 
-    samples_per_step_ = format.bytesForDuration(16666) * format.bytesPerSample(); // stepped at 60hz, 16.6ms
+    const int32_t us_per_frame = 1000000 / 60; // stepped at 60hz, 16.6ms
+    samples_per_step_ = format.bytesForDuration(us_per_frame) / format.bytesPerSample();
 
     if (format.isValid())
     {
@@ -216,10 +267,24 @@ void Generator::producer_loop()
                     break;
                 }
 
+                case Event::Decrement_Linear_Counter:
+                {
+                    std::scoped_lock lock(streams_lock_);
+                    streams_[to_index(event.second)].decrement_linear_counter();
+                    break;
+                }
+
                 case Event::Decrement_Volume:
                 {
                     std::scoped_lock lock(streams_lock_);
                     streams_[to_index(event.second)].decrement_volume_envelope();
+                    break;
+                }
+
+                case Event::Step_Sweep:
+                {
+                    std::scoped_lock lock(streams_lock_);
+                    streams_[to_index(event.second)].step_sweep();
                     break;
                 }
             }
@@ -313,10 +378,26 @@ void Generator::decrement_counter(Audio::Channel channel)
     sema_.release();
 }
 
+void Generator::decrement_linear_counter()
+{
+    std::scoped_lock lock(queues_lock_);
+    events_.push(std::make_pair(Event::Decrement_Linear_Counter, Audio::Channel::Triangle));
+
+    sema_.release();
+}
+
 void Generator::decrement_volume_envelope(Audio::Channel channel)
 {
     std::scoped_lock lock(queues_lock_);
     events_.push(std::make_pair(Event::Decrement_Volume, channel));
+
+    sema_.release();
+}
+
+void Generator::step_sweep(Audio::Channel channel)
+{
+    std::scoped_lock lock(queues_lock_);
+    events_.push(std::make_pair(Event::Step_Sweep, channel));
 
     sema_.release();
 }
@@ -341,7 +422,7 @@ void Generator::update_parameters(Audio::Channel channel, Audio::Parameters para
 AudioStream::AudioStream(Audio::Channel channel)
  : channel_(channel)
 {
-    if constexpr (ENABLE_APU_LOGGING)
+    if constexpr (ENABLE_APU_WAVEFORM_LOGGING)
     {
         std::string path = std::string("/tmp/") +
                            std::string(magic_enum::enum_name<Audio::Channel>(channel_)) +
@@ -360,7 +441,7 @@ AudioStream::AudioStream(AudioStream&& other)
  : channel_(other.channel_)
  , counter_(other.counter_)
  , volume_(other.volume_)
- , volume_offset_(other.volume_offset_)
+ , volume_decay_rate_(other.volume_decay_rate_)
  , constant_volume_(other.constant_volume_)
  , pos_(other.pos_)
  , waveform_(other.waveform_)
@@ -373,16 +454,19 @@ int16_t AudioStream::read_sample()
 {
     if (!enabled_)
     {
+        if constexpr (ENABLE_APU_WAVEFORM_LOGGING)
+        {
+            log_ << 0 << std::endl;
+        }
+
         return 0;
     }
 
-    // int16_t result = *reinterpret_cast<int16_t*>(&buffer_[pos_]);
-    // pos_ = (pos_ + 2) % buffer_.size();
     int16_t result = waveform_->read_sample();
 
     int16_t volume_adjusted = int16_t(result * (volume_ / 15.0));
 
-    if constexpr (ENABLE_APU_LOGGING)
+    if constexpr (ENABLE_APU_WAVEFORM_LOGGING)
     {
         log_ << volume_adjusted << std::endl;
     }
@@ -393,11 +477,6 @@ void AudioStream::set_enabled(bool enabled)
 {
     enabled_ = enabled;
 
-    if (VERBOSE)
-    {
-        LOG(INFO) << magic_enum::enum_name<Audio::Channel>(channel_) << " set_enabled " << +enabled << " counter " << counter_ << " vol " << volume_;
-    }
-
     if (!enabled_)
     {
         counter_ = 0;
@@ -406,11 +485,17 @@ void AudioStream::set_enabled(bool enabled)
 
 void AudioStream::decrement_volume_envelope()
 {
-    if (!volume_)
+    volume_envelope_ticks_++;
+
+    if (!volume_ || !volume_decay_rate_)
     {
         return;
     }
-    volume_ -= volume_offset_;
+
+    if (volume_envelope_ticks_ % volume_decay_rate_ == 0)
+    {
+        volume_ -= 3;
+    }
 
     if (volume_ < 0)
     {
@@ -419,12 +504,29 @@ void AudioStream::decrement_volume_envelope()
 
     if (volume_ == 0)
     {
-        set_enabled(false);
+        if (volume_loop_)
+        {
+            volume_ = 15;
+        }
+        else
+        {
+            set_enabled(false);
+        }
     }
 }
 
 void AudioStream::decrement_counter()
 {
+    if (channel_ == Audio::Channel::Triangle && linear_counter_)
+    {
+        linear_counter_--;
+
+        if (!linear_counter_)
+        {
+            set_enabled(false);
+        }
+    }
+
     if (!counter_)
     {
         return;
@@ -437,16 +539,94 @@ void AudioStream::decrement_counter()
     }
 }
 
-void AudioStream::reload(Audio::Parameters params, bool reset_phase)
+void AudioStream::decrement_linear_counter()
 {
-    waveform_->set_frequency(params.frequency, params.duty_cycle, reset_phase);
+    if (!linear_counter_)
+    {
+        return;
+    }
+
+    linear_counter_--;
+
+    if (!linear_counter_)
+    {
+        set_enabled(false);
+    }
+}
+
+void AudioStream::step_sweep()
+{
+    sweep_ticks_++;
+
+    if (!sweep_enabled_)
+    {
+        return;
+    }
+
+    if (waveform_->target_frequency() < 8)
+    {
+        set_enabled(false);
+        return;
+    }
+
+    // per docs this should be sweep period + 1, but that causes many sounds to drop out so quickly
+    // they cannot be heard (like mario walking in donkey kong). There is probably an issue upstream
+    // where this isn't called at 120 hz
+    if (sweep_ticks_ % (sweep_period_ + 2) == 0)
+    {
+        int32_t new_freq = sweep_negate_ ?
+                           waveform_->target_frequency() + (waveform_->target_frequency() >> sweep_shift_count_) :
+                           waveform_->target_frequency() - (waveform_->target_frequency() >> sweep_shift_count_);
+
+        // LOG(INFO) << "sweep update " << magic_enum::enum_name<Audio::Channel>(channel_) << " ticks " << sweep_ticks_ << " period " << sweep_period_
+        //           << " new_freq " << new_freq << " from freq " << waveform_->target_frequency()
+        //           << " shift " << sweep_shift_count_;
+
+        if (!sweep_negate_ && channel_ == Audio::Channel::Square_Pulse_1)
+        {
+            new_freq--;
+        }
+
+        if (new_freq <= 0)
+        {
+            new_freq = 0;
+            set_enabled(false);
+        }
+        else if (new_freq > 0x7FF)
+        {
+            new_freq = 0;
+            set_enabled(false);
+        }
+
+        waveform_->set_frequency(new_freq);
+    }
+}
+
+void AudioStream::reload(Audio::Parameters params, bool)
+{
+    waveform_->set_frequency(params.frequency, params.duty_cycle);
     pos_ = 0;
+
     counter_ = params.counter;
+    linear_counter_ = params.linear_counter_load;
 
     // params.volume contains the volume, if constant, otherwise the offset for the envelope
     constant_volume_ = params.constant_volume;
     volume_ = constant_volume_ ? params.volume : 15;
-    volume_offset_ = constant_volume_ ? 0 : params.volume;
+    volume_decay_rate_ = constant_volume_ ? 0 : 240 / (params.volume + 1);
+    volume_loop_ = params.loop;
 
-    set_enabled(true);
+    sweep_enabled_ = params.sweep_enabled;
+    sweep_period_ = params.sweep_period;
+    sweep_negate_ = params.sweep_negate;
+    sweep_shift_count_ = params.sweep_shift_count;
+
+    if (params.frequency == 0)
+    {
+        set_enabled(false);
+    }
+    else
+    {
+        set_enabled(true);
+    }
 }

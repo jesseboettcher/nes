@@ -37,7 +37,9 @@ public:
     bool enabled() { return enabled_; }
     void set_enabled(bool enabled);
     void decrement_counter();
+    void decrement_linear_counter();
     void decrement_volume_envelope();
+    void step_sweep();
 
     void reload(Audio::Parameters params, bool reset_phase);
 
@@ -47,10 +49,21 @@ public:
 
 private:
     Audio::Channel channel_;
-    int32_t counter_;    // countdown ticks
+
+    int32_t counter_;
+    int32_t linear_counter_{0};
+
     int32_t volume_{15}; // 0-15
-    int32_t volume_offset_; // for changing envelope
-    bool constant_volume_;
+    int32_t volume_decay_rate_; // for changing envelope
+    uint64_t volume_envelope_ticks_{0};
+    bool volume_loop_{false};
+    bool constant_volume_{true};
+
+    bool sweep_enabled_{false};
+    int32_t sweep_period_{0};
+    bool sweep_negate_{false};
+    int32_t sweep_shift_count_{0};
+    uint64_t sweep_ticks_{0};
 
     int64_t pos_ = 0;
     std::shared_ptr<Waveform> waveform_;
@@ -75,7 +88,9 @@ public:
         Parameter_Update,
         Parameter_Update_Reset_Phase,
         Decrement_Counter,
-        Decrement_Volume
+        Decrement_Linear_Counter,
+        Decrement_Volume,
+        Step_Sweep
     };
     using EventChannel = std::pair<Event, Audio::Channel>;
 
@@ -113,8 +128,14 @@ public:
     // Called on APU frame steps. Stream will self-disable when it reaches zero
     void decrement_counter(Audio::Channel channel);
 
+    // Called on APU frame steps. Stream will self-disable when it reaches zero
+    void decrement_linear_counter();
+
     // Called on APU frame steps
     void decrement_volume_envelope(Audio::Channel channel);
+
+    // Stepped at 2x frame frequency
+    void step_sweep(Audio::Channel channel);
 
     // Updates stream to a new configuration (e.g. frequency, volume envelope, counter, etc)
     void update_parameters(Audio::Channel channel, Audio::Parameters params, bool reset_phase);

@@ -5,6 +5,8 @@
 #include <QAudioFormat>
 #include <QAudioSink>
 
+#include <fstream>
+
 // AudioPlayer is a lightweight, clean interface between the APU and the details of audio
 // stream management, mixing, and output.
 //
@@ -25,11 +27,18 @@ public:
     void set_enabled(Audio::Channel channel, bool enabled);
 
     void decrement_counter(Audio::Channel channel);
+    void decrement_linear_counter(); // Channel::Triangle only
     void decrement_volume_envelope(Audio::Channel channel);
+
+    void step_sweep(Audio::Channel channel);
 
     void test();
 
 private:
     std::shared_ptr<Generator> generator_;
     std::shared_ptr<QAudioSink> audio_sink_;
+
+    uint64_t audio_player_cycles_{0};
+
+    std::ofstream log_;
 };
