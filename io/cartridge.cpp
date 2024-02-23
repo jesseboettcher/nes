@@ -422,7 +422,7 @@ std::shared_ptr<Cartridge> Cartridge::create(std::filesystem::path path)
             break;
 
         default:
-            LOG(ERROR) << "Unsupported mapper (" << mapper_number << ")";
+            LOG(ERROR) << "Unsupported mapper (" << +mapper_number << ")";
             return result_cartridge;
     }
     LOG(INFO) << *result_cartridge;
