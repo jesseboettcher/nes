@@ -102,17 +102,20 @@ public:
             Foreground
         };
 
-        Sprite(uint8_t y, uint8_t index, uint8_t attr, uint8_t x)
+        Sprite(uint8_t y, uint8_t index, uint8_t attr, uint8_t x, uint16_t base_addr)
         : y_pos(y)
         , x_pos(x)
         , attributes(attr)
         , tile_index(index)
+        , pattern_table_base_address(base_addr)
         {}
 
         uint8_t y_pos;
         uint8_t tile_index;
         uint8_t attributes;
         uint8_t x_pos;
+
+        uint16_t pattern_table_base_address;
 
         std::shared_ptr<Canvas> canvas;
 
@@ -146,7 +149,7 @@ public:
     uint16_t pattern_table_base_address() const;
 
     // base address of the pattern table used for sprites
-    uint16_t sprite_pattern_table_address() const;
+    uint16_t sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1 = std::nullopt) const;
 
     SpriteType sprite_type() const;
 

@@ -269,12 +269,11 @@ void NesPPU::read_sprite_oam()
 
 void NesPPU::render_sprites(Sprite::Layer layer)
 {
-    LOG_IF(FATAL, sprite_type() == SpriteType::Sprite_8x16) << "sprite size 8x16 not supported yet";
-
     if (sprites_.size() == 0)
     {
         return;
     }
+    NesPPU::SpriteType sprite_size = sprite_type();
 
     for (int16_t i = 63;i >= 0;i--) // sprite with lower address wins with overlapping sprites
     {
@@ -290,54 +289,74 @@ void NesPPU::render_sprites(Sprite::Layer layer)
             continue;
         }
 
-        for (uint8_t p = 0;p < NAMETABLE_TILE_SIZE * NAMETABLE_TILE_SIZE;p++)
+        auto render_sprite_tile = [this, &s, &i](int32_t tile_index, uint8_t y_pos)
         {
-            uint8_t tile_pixel_x = p % NAMETABLE_TILE_SIZE;
-            uint8_t tile_pixel_y = p / NAMETABLE_TILE_SIZE;
-            uint8_t debug_tile_pixel_x = tile_pixel_x;
-            uint8_t debug_tile_pixel_y = tile_pixel_y;
-
-            uint8_t pixel_x = s.x_pos + tile_pixel_x;
-            uint8_t pixel_y = s.y_pos + tile_pixel_y + 1; // sprite data is delayed by one scanline https://www.nesdev.org/wiki/PPU_OAM
-
-            if (s.flip_horizontal())
+            for (uint8_t p = 0;p < NAMETABLE_TILE_SIZE * NAMETABLE_TILE_SIZE;p++)
             {
-                tile_pixel_x = NAMETABLE_TILE_SIZE - (p % NAMETABLE_TILE_SIZE) - 1;
+                uint8_t tile_pixel_x = p % NAMETABLE_TILE_SIZE;
+                uint8_t tile_pixel_y = p / NAMETABLE_TILE_SIZE;
+                uint8_t debug_tile_pixel_x = tile_pixel_x;
+                uint8_t debug_tile_pixel_y = tile_pixel_y;
+
+                uint8_t pixel_x = s.x_pos + tile_pixel_x;
+                uint8_t pixel_y = y_pos + tile_pixel_y + 1; // sprite data is delayed by one scanline https://www.nesdev.org/wiki/PPU_OAM
+
+                if (s.flip_horizontal())
+                {
+                    tile_pixel_x = NAMETABLE_TILE_SIZE - (p % NAMETABLE_TILE_SIZE) - 1;
+                }
+                if (s.flip_vertical())
+                {
+                    tile_pixel_y = NAMETABLE_TILE_SIZE - (p / NAMETABLE_TILE_SIZE) - 1;
+                }
+                
+                // Get the index into the color table from the pattern table tile
+                const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(s.pattern_table_base_address,
+                                                                                         tile_pixel_x,
+                                                                                         tile_pixel_y,
+                                                                                         tile_index);
+                if (colortable_index == 0)
+                {
+                    continue; // transparent
+                }
+
+                if (i == 0) // sprite 0 hit check
+                {
+                    // TODO only when hitting a non-transparent background pixel
+                    if (!(registers_[PPUSTATUS] & PPUSTATUS_sprite0_hit))
+                    {
+                        registers_[PPUSTATUS] |= PPUSTATUS_vblank;
+                    }
+                }
+
+                // Determine which palette to use
+                const uint8_t palette_index = 4 + (s.attributes & 0x3);
+
+                // Retrieve the RGB color for this pixel
+                const NesDisplay::Color pixel_color = fetch_color_from_palette(palette_index, colortable_index);
+
+                // Draw the pixel!
+                display_.draw_pixel(pixel_x, pixel_y, pixel_color);
+                s.canvas.get()[debug_tile_pixel_y][debug_tile_pixel_x] = pixel_color;
             }
+        };
+
+        if (sprite_size == SpriteType::Sprite_8x8)
+        {
+            render_sprite_tile(s.tile_index, s.y_pos);
+        }
+        else // (sprite_size == SpriteType::Sprite_8x16)
+        {
             if (s.flip_vertical())
             {
-                tile_pixel_y = NAMETABLE_TILE_SIZE - (p / NAMETABLE_TILE_SIZE) - 1;
+                render_sprite_tile(s.tile_index + 0, s.y_pos + NAMETABLE_TILE_SIZE);
+                render_sprite_tile(s.tile_index + 1, s.y_pos);
             }
-            
-            // Get the index into the color table from the pattern table tile
-            const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(sprite_pattern_table_address(),
-                                                                                     tile_pixel_x,
-                                                                                     tile_pixel_y,
-                                                                                     s.tile_index);
-            if (colortable_index == 0)
+            else
             {
-                continue; // transparent
+                render_sprite_tile(s.tile_index + 0, s.y_pos);
+                render_sprite_tile(s.tile_index + 1, s.y_pos + NAMETABLE_TILE_SIZE);
             }
-
-
-            if (i == 0) // sprite 0 hit check
-            {
-                // TODO only when hitting a non-transparent background pixel
-                if (!(registers_[PPUSTATUS] & PPUSTATUS_sprite0_hit))
-                {
-                    registers_[PPUSTATUS] |= PPUSTATUS_vblank;
-                }
-            }
-
-            // Determine which palette to use
-            const uint8_t palette_index = 4 + (s.attributes & 0x3);
-
-            // Retrieve the RGB color for this pixel
-            const NesDisplay::Color pixel_color = fetch_color_from_palette(palette_index, colortable_index);
-
-            // Draw the pixel!
-            display_.draw_pixel(pixel_x, pixel_y, pixel_color);
-            s.canvas.get()[debug_tile_pixel_y][debug_tile_pixel_x] = pixel_color;
         }
     }
 
@@ -360,8 +379,10 @@ NesPPU::Sprite NesPPU::sprite(uint16_t index) const
 
     const uint8_t* oam_p = std::addressof(oam_memory_[index * sizeof(OamSprite)]);
     const OamSprite* sprite_p = reinterpret_cast<const OamSprite*>(oam_p);
+    uint8_t pattern_table_base = sprite_pattern_table_address(sprite_p->tile_index);
 
-    return Sprite(sprite_p->y_pos, sprite_p->tile_index, sprite_p->attributes, sprite_p->x_pos);
+    return Sprite(sprite_p->y_pos, sprite_p->tile_index, sprite_p->attributes, sprite_p->x_pos,
+                  pattern_table_base);
 }
 
 void NesPPU::handle_oam_data_register()
@@ -516,18 +537,27 @@ uint16_t NesPPU::nametable_base_address()
     return 0;
 }
 
-uint16_t NesPPU::sprite_pattern_table_address() const
+uint16_t NesPPU::sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1) const
 {
-    switch(read_register(PPUCTRL) & PPUCTRL_SpriteTable_Addr)
+    if (sprite_type() == SpriteType::Sprite_8x8)
     {
-        case 0:
-            return 0x0000;
+        switch(read_register(PPUCTRL) & PPUCTRL_SpriteTable_Addr)
+        {
+            case 0:
+                return 0x0000;
 
-        case PPUCTRL_SpriteTable_Addr:
-            return 0x1000;
+            case PPUCTRL_SpriteTable_Addr:
+                return 0x1000;
+        }
+        assert(false);
+        return 0;
     }
-    assert(false);
-    return 0;
+
+    if (tile_byte_1.value() & 0x01)
+    {
+        return 0x1000;
+    }
+    return 0x0000;
 }
 
 NesPPU::SpriteType NesPPU::sprite_type() const
