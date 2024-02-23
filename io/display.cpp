@@ -29,6 +29,12 @@ void NesDisplay::draw_pixel(int32_t x, int32_t y, Color color)
     {
         return;
     }
+
+    if (y < (OVERSCAN / 2) || y > HEIGHT - (OVERSCAN / 2))
+    {
+        color = BLACK;
+    }
+
     offscreen_[draw_buffer_index()][y][x] = color;
 }
 

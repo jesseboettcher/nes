@@ -12,16 +12,19 @@
 class NesDisplay
 {
 public:
-    static constexpr int32_t WIDTH = 256;
-    static constexpr int32_t HEIGHT = 240;
-    
     struct Color
     {
+
         uint8_t r;
         uint8_t g;
         uint8_t b;
         uint8_t a;
     };
+
+    static constexpr int32_t WIDTH = 256;
+    static constexpr int32_t HEIGHT = 240;
+    static constexpr int32_t OVERSCAN = 16;
+    static constexpr Color BLACK = Color({0, 0, 0, 255});
     
     NesDisplay() {}
     
