@@ -225,6 +225,12 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
+    QObject::connect(&app, &QGuiApplication::aboutToQuit, []()
+    {
+        // stop emulation, clean-up before exit
+        UIContext::instance().nes->user_interrupt();
+    });
+
     ui.engine.rootContext()->setContextProperty("UIController", &ui.controller);
     ui.engine.rootContext()->setContextProperty("menu_handler", &ui.menu_handler);
     ui.engine.rootContext()->setContextProperty("SpritesModel", &ui.sprites_model);
