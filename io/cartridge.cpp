@@ -158,7 +158,7 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
 
         if (load_write_count_ == 5)
         {
-            LOG(INFO) << "mmc1 load register " << std::hex << +load_register_ << " address " << a;
+            // LOG(INFO) << "mmc1 load register " << std::hex << +load_register_ << " address " << a;
             if (a < 0xA000) // control register
             {
                 control_register_ = load_register_;
@@ -175,7 +175,7 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
             }
             else if (a < 0xE000) // chr bank 1 register
             {
-                assert(!has_chr_ram());
+                // assert(!has_chr_ram());
                 chr_bank1_register_ = load_register_;
 
                 if (control_register_ & 0x10)
@@ -199,21 +199,21 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
                     case 1:
                     {
                         int32_t bank_size = 0x8000;
-                        prg_bank0_ = prg_rom(pgr_bank_register_ * bank_size, bank_size);
+                        prg_bank0_ = prg_rom(pgr_bank_register_ * 0x4000, bank_size);
                         break;
                     }
 
                     case 3:
                     {
                         int32_t bank_size = 0x4000;
-                        prg_bank0_ = prg_rom(pgr_bank_register_ * bank_size, bank_size);
+                        prg_bank0_ = prg_rom(pgr_bank_register_ * 0x4000, bank_size);
                         break;
                     }
 
                     case 4:
                     {
                         int32_t bank_size = 0x4000;
-                        prg_bank0_ = prg_rom(pgr_bank_register_ * bank_size, bank_size);
+                        prg_bank0_ = prg_rom(pgr_bank_register_ * 0x4000, bank_size);
                         break;
                     }
                 }
@@ -357,13 +357,13 @@ std::ostream& operator << (std::ostream& os, const Cartridge& f)
 
     uint32_t sizeofprg = f.sizeof_prg_rom();
 
-    os << "Format:\t" << magic_enum::enum_name<Cartridge::Format>(f.format_)  << std::endl;
-    os << "prg-rom:\t0x" << sizeofprg << std::endl;
-    os << "chr-rom:\t0x" << f.sizeof_chr_rom() << std::endl;
-    os << "mapper:\t0x" << static_cast<int32_t>(f.mapper()) << std::endl;
-    os << "battery:\t" << (f.has_battery() ? "yes" : "no") << std::endl;
-    os << "trainer:\t" << (f.has_trainer() ? "yes" : "no") << std::endl;
-    os << "nametable mirroring:\t" << (f.horizontal_nametable_mirroring() ? "horizontal" : "vertical") << std::endl;
+    os << std::left << std::setw(23) << std::setfill(' ') << "Format:" << magic_enum::enum_name<Cartridge::Format>(f.format_)  << std::endl;
+    os << std::left << std::setw(23) << std::setfill(' ') << "prg-rom:" << "0x" << sizeofprg << std::endl;
+    os << std::left << std::setw(23) << std::setfill(' ') << "chr-rom:" << "0x" << f.sizeof_chr_rom() << std::endl;
+    os << std::left << std::setw(23) << std::setfill(' ') << "mapper:"  << "0x" << static_cast<int32_t>(f.mapper()) << std::endl;
+    os << std::left << std::setw(23) << std::setfill(' ') << "battery:" << (f.has_battery() ? "yes" : "no") << std::endl;
+    os << std::left << std::setw(23) << std::setfill(' ') << "trainer:" << (f.has_trainer() ? "yes" : "no") << std::endl;
+    os << std::left << std::setw(23) << std::setfill(' ') << "nametable mirroring:" << (f.horizontal_nametable_mirroring() ? "horizontal" : "vertical") << std::endl;
 
     return os;
 }
