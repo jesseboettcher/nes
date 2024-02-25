@@ -160,7 +160,7 @@ public:
     bool step();
 
     // Accessors for the PPU registers from AddressBus
-    uint8_t read_register(uint16_t a) const;
+    uint8_t read_register(uint16_t a);
     uint8_t& write_register(uint16_t a);
 
     const PPUAddressBus& cmemory() { return ppu_address_bus_; }
@@ -170,12 +170,12 @@ public:
     uint16_t nametable_base_address_for_pixel(uint16_t pixel_x, uint16_t pixel_y);
 
     // get the base address of the current pattern table
-    uint16_t pattern_table_base_address() const;
+    uint16_t pattern_table_base_address();
 
     // base address of the pattern table used for sprites
-    uint16_t sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1 = std::nullopt) const;
+    uint16_t sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1 = std::nullopt);
 
-    SpriteType sprite_type() const;
+    SpriteType sprite_type();
 
     // Get index into the pattern table for the provided pixel, retreived from the nametable
     uint8_t get_pattern_tile_index_for_pixel(uint16_t pixel_x, uint16_t pixel_y);
@@ -191,7 +191,7 @@ public:
     NesDisplay::Color fetch_color_from_palette(uint8_t palette_index, uint8_t colortable_index) const;
 
     // Retrieve sprite data from OAM memory
-    Sprite sprite(uint16_t index) const;
+    Sprite sprite(uint16_t index);
 
 protected:
     friend class Nes;
@@ -273,10 +273,12 @@ private:
     uint16_t oam_data_addr_{0};
     uint64_t oam_addr_write_count{0};
 
-    uint16_t ppu_data_addr_{0};
-    uint64_t ppu_addr_write_count{0};
+    // write latch for tracking first vs second write. it is shared between PPUADDR and PPUSCROLL
+    // is reset by reads from PPUSTATUS
+    uint64_t write_latch_{0};
 
-    uint64_t scroll_write_count_;
+    uint16_t ppu_data_addr_{0};
+
     std::pair<int32_t, int32_t> scroll_;
     int32_t pending_scroll_x_{0};
     int32_t pending_scroll_y_{0};

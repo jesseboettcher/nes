@@ -97,9 +97,14 @@ bool NesPPU::step()
     return true;
 }
 
-uint8_t NesPPU::read_register(uint16_t a) const
+uint8_t NesPPU::read_register(uint16_t a)
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
+
+    if (a == PPUSTATUS)
+    {
+        write_latch_ = 0;
+    }
 
     return registers_[a];
 }
@@ -380,7 +385,7 @@ void NesPPU::render_sprites(Sprite::Layer layer)
     }
 }
 
-NesPPU::Sprite NesPPU::sprite(uint16_t index) const
+NesPPU::Sprite NesPPU::sprite(uint16_t index)
 {
     struct OamSprite
     {
@@ -427,7 +432,7 @@ void NesPPU::handle_ppu_data_register()
     if (registers_.had_write(PPUADDR))
     {
         registers_.clear_write_flag(PPUADDR);
-        if (ppu_addr_write_count % 2 == 0)
+        if (write_latch_ % 2 == 0)
         {
             ppu_data_addr_ = 0x0;
 
@@ -439,7 +444,7 @@ void NesPPU::handle_ppu_data_register()
             // second write, low address byte
             ppu_data_addr_ |= registers_[PPUADDR];
         }
-        ppu_addr_write_count++;
+        write_latch_++;
     }
 
     if (registers_.had_write(PPUDATA))
@@ -448,7 +453,7 @@ void NesPPU::handle_ppu_data_register()
         // If the processor wrote to the PPUDATA register, write that data to the address pointed to
         // by ppu_data_addr in video memory. Then increment the address by the amount specified by
         // the control register (either horizontal or down).
-        LOG_IF(ERROR, ppu_addr_write_count % 2 != 0) << "Error: "
+        LOG_IF(ERROR, write_latch_ % 2 != 0) << "Error: "
                 << " write to PPUDATA without a fully set PPUADDR";
 
         ppu_address_bus_.write(ppu_data_addr_, registers_[PPUDATA]);
@@ -486,7 +491,7 @@ void NesPPU::handle_scroll_register()
     {
         registers_.clear_write_flag(PPUSCROLL);
 
-        if (scroll_write_count_++ % 2 == 0)
+        if (write_latch_++ % 2 == 0)
         {
             pending_scroll_x_ = registers_[PPUSCROLL];
         }
@@ -534,7 +539,7 @@ bool NesPPU::check_rendering_falling_edge() const
     return (scanline_ == 239 && cycle_ == 340);
 }
 
-uint16_t NesPPU::pattern_table_base_address() const
+uint16_t NesPPU::pattern_table_base_address()
 {
     switch (read_register(PPUCTRL) & PPUCTRL_Backgroundtable_Select)
     {
@@ -586,7 +591,7 @@ uint16_t NesPPU::nametable_base_address_for_pixel(uint16_t pixel_x, uint16_t pix
     return nt_base;
 }
 
-uint16_t NesPPU::sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1) const
+uint16_t NesPPU::sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1)
 {
     if (sprite_type() == SpriteType::Sprite_8x8)
     {
@@ -609,7 +614,7 @@ uint16_t NesPPU::sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1
     return 0x0000;
 }
 
-NesPPU::SpriteType NesPPU::sprite_type() const
+NesPPU::SpriteType NesPPU::sprite_type()
 {
     if (read_register(PPUCTRL) & PPUCTRL_SpriteSize_Select)
     {
