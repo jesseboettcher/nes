@@ -49,6 +49,29 @@ public:
     using PaletteRam = std::array<uint8_t, 0x20>;
     using VideoMemory = std::array<uint8_t, 2 * 1024>;
 
+
+    class OamDmaRegister
+    {
+    public:
+        uint8_t value() { return value_; }
+        bool had_write() { return had_write_; }
+
+        uint8_t& write()
+        {
+            had_write_ = true;
+            return value_;
+        }
+
+        void clear_write_flag()
+        {
+            had_write_ = false;
+        }
+
+    private:
+        uint8_t value_;
+        bool had_write_;
+    };
+
     class Registers
     {
         // Fast lookup for registers with [] notation. Relies on the PPU register addresses
@@ -56,7 +79,7 @@ public:
         // 0x4014 and actually supposed to be handled by the main CPU.
 
     public:
-        static constexpr int32_t REGISTER_COUNT = 9;
+        static constexpr int32_t REGISTER_COUNT = 8;
 
         Registers() : values_(REGISTER_COUNT, 0x00), had_write_flags_(REGISTER_COUNT, false) {}
 
@@ -79,7 +102,7 @@ public:
     private:
         inline uint16_t to_index(uint16_t reg) const
         {
-            return reg > 0x2007 ? REGISTER_COUNT - 1 : reg - 0x2000;
+            return reg - 0x2000;
         }
 
         std::vector<uint8_t> values_;
@@ -137,37 +160,38 @@ public:
     bool step();
 
     // Accessors for the PPU registers from AddressBus
-    uint8_t read_register(uint16_t a) const;
+    uint8_t read_register(uint16_t a);
     uint8_t& write_register(uint16_t a);
 
     const PPUAddressBus& cmemory() { return ppu_address_bus_; }
 
     // get the base address of the current nametable
     uint16_t nametable_base_address();
+    uint16_t nametable_base_address_for_pixel(uint16_t pixel_x, uint16_t pixel_y);
 
     // get the base address of the current pattern table
-    uint16_t pattern_table_base_address() const;
+    uint16_t pattern_table_base_address();
 
     // base address of the pattern table used for sprites
-    uint16_t sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1 = std::nullopt) const;
+    uint16_t sprite_pattern_table_address(std::optional<uint8_t> tile_byte_1 = std::nullopt);
 
-    SpriteType sprite_type() const;
+    SpriteType sprite_type();
 
     // Get index into the pattern table for the provided pixel, retreived from the nametable
-    uint8_t get_pattern_tile_index_for_pixel(uint8_t pixel_x, uint8_t pixel_y);
+    uint8_t get_pattern_tile_index_for_pixel(uint16_t pixel_x, uint16_t pixel_y);
 
     // Get the index into the color table from the pattern table tile
     uint8_t get_colortable_index_for_tile_and_pixel(uint16_t pattern_table_base_address,
-                                                    uint8_t pixel_x, uint8_t pixel_y,
+                                                    uint16_t pixel_x, uint16_t pixel_y,
                                                     uint8_t pattern_tile_index) const;
     // Determine which palette to use
-    uint8_t get_palette_index_for_pixel(uint8_t pixel_x, uint8_t pixel_y);
+    uint8_t get_palette_index_for_pixel(uint16_t pixel_x, uint16_t pixel_y);
 
     // Retrieve the RGB color for the provided palette and color table index
     NesDisplay::Color fetch_color_from_palette(uint8_t palette_index, uint8_t colortable_index) const;
 
     // Retrieve sprite data from OAM memory
-    Sprite sprite(uint16_t index) const;
+    Sprite sprite(uint16_t index);
 
 protected:
     friend class Nes;
@@ -200,6 +224,8 @@ private:
     // Make vram updates based on any activity on OAMDMA
     void handle_oam_dma_register();
 
+    void handle_scroll_register();
+
     void increment_cycle();
 
     // check the current scanline and cycle and return true if it represents the start or end
@@ -226,6 +252,7 @@ private:
     bool& nmi_signal_;
 
     Registers registers_;
+    OamDmaRegister oam_dma_register_;
     VideoMemory internal_memory_;
     PaletteRam palette_ram_;
 
@@ -246,6 +273,13 @@ private:
     uint16_t oam_data_addr_{0};
     uint64_t oam_addr_write_count{0};
 
+    // write latch for tracking first vs second write. it is shared between PPUADDR and PPUSCROLL
+    // is reset by reads from PPUSTATUS
+    uint64_t write_latch_{0};
+
     uint16_t ppu_data_addr_{0};
-    uint64_t ppu_addr_write_count{0};
+
+    std::pair<int32_t, int32_t> scroll_;
+    int32_t pending_scroll_x_{0};
+    int32_t pending_scroll_y_{0};
 };
