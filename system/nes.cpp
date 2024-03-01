@@ -80,6 +80,7 @@ void Nes::run()
             break;
         }
         adjust_emulation_speed();
+        print_emulation_speed();
     }
     update_state(State::IDLE);
 

@@ -227,6 +227,8 @@ private:
     void handle_scroll_register();
 
     void increment_cycle();
+    void increment_nametable_x_offsets();
+    void increment_nametable_y_offsets();
 
     // check the current scanline and cycle and return true if it represents the start or end
     // of vertical blanking
@@ -269,6 +271,14 @@ private:
     uint32_t    cycle_{341};
     uint32_t    scanline_{260};
     uint64_t    frame_{0};
+
+    uint16_t nametable_ptr{0};
+    uint16_t pixel_x_;
+    uint16_t pixel_y_;
+    uint16_t tile_x_;
+    int16_t tile_x_pixel_;
+    uint16_t tile_y_;
+    uint16_t tile_y_pixel_;
 
     uint16_t oam_data_addr_{0};
     uint64_t oam_addr_write_count{0};

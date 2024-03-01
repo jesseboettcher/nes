@@ -35,8 +35,14 @@ void NesPPU::reset()
     internal_memory_.fill(0);
     display_.clear_screen(NesDisplay::Color({0x00, 0x00, 0x00, 0xFF}));
 
+    cycle_ = 341;
+    scanline_ = 260;
+    frame_ = 0;
+
+
     cached_nametable_address_ = nametable_base_address();
     cached_patterntable_address = pattern_table_base_address();
+    nametable_ptr = nametable_base_address();
 
     scroll_ = std::make_pair(0, 0);
 }
@@ -124,22 +130,31 @@ uint8_t& NesPPU::write_register(uint16_t a)
 
 void NesPPU::render_pixel()
 {
-    // Determine which pixel we are working on
-    const uint8_t pixel_x = cycle_;
-    const uint8_t pixel_y = scanline_;
-    const uint16_t background_pixel_x = pixel_x + scroll_.first;
-    const uint16_t background_pixel_y = pixel_y + scroll_.second;
+    // Direct indexing into nametable is easier code to understand, but it is also a lot slower
+    // than just incrementing the position each cycle. Keeping this commented out for any debugging
+    // of cycle increment changes.
+    //
+    // const uint8_t pixel_x = cycle_;
+    // const uint8_t pixel_y = scanline_;
+    // const uint16_t background_pixel_x = pixel_x + scroll_.first;
+    // const uint16_t background_pixel_y = pixel_y + scroll_.second;
+    //
+    // const uint16_t tile_y = background_pixel_y % 240 / NAMETABLE_TILE_SIZE;
+    // const uint16_t tile_x = background_pixel_x % 256 / NAMETABLE_TILE_SIZE;
+    // const uint16_t nt_addr = nametable_base_address_for_pixel(background_pixel_x, background_pixel_y) +
+    //                          tile_x + tile_y * NAMETABLE_WIDTH;
+    // assert(nt_addr == nametable_ptr);
 
     // Get the index of the pattern tile from the nametable
-    const uint8_t pattern_tile_index = get_pattern_tile_index_for_pixel(background_pixel_x, background_pixel_y);
+    const uint8_t pattern_tile_index = ppu_address_bus_.read(nametable_ptr);
 
     // Get the index into the color table from the pattern table tile
     const uint8_t colortable_index = get_colortable_index_for_tile_and_pixel(cached_patterntable_address,
-                                                                             background_pixel_x % 8,
-                                                                             background_pixel_y % NAMETABLE_TILE_SIZE,
+                                                                             tile_x_pixel_,
+                                                                             tile_y_pixel_,
                                                                              pattern_tile_index);
     // Determine which palette to use
-    const uint8_t palette_index = get_palette_index_for_pixel(background_pixel_x, background_pixel_y);
+    const uint8_t palette_index = get_palette_index_for_pixel(pixel_x_, pixel_y_);
 
     // Retrieve the RGB color for this pixel
     const NesDisplay::Color pixel_color = fetch_color_from_palette(palette_index, colortable_index);
@@ -151,7 +166,7 @@ void NesPPU::render_pixel()
     }
 
     // Draw the pixel!
-    display_.draw_pixel(pixel_x, pixel_y, pixel_color);
+    display_.draw_pixel(cycle_, scanline_, pixel_color);
 }
 
 uint8_t NesPPU::get_pattern_tile_index_for_pixel(uint16_t pixel_x, uint16_t pixel_y)
@@ -212,11 +227,9 @@ uint8_t NesPPU::get_palette_index_for_pixel(uint16_t pixel_x, uint16_t pixel_y)
     const uint16_t attribute_addr = nametable_base_address_for_pixel(pixel_x, pixel_y) +
                                     NAMETABLE_WIDTH * NAMETABLE_HEIGHT +
                                     attributetable_x + attributetable_y * ATTRIBUTETABLE_WIDTH;
-    const uint8_t tile_x = pixel_x % 256 / NAMETABLE_TILE_SIZE;
-    const uint8_t tile_y = pixel_y % 240 / NAMETABLE_TILE_SIZE;
 
-    const uint8_t tile_offset_x = tile_x % TILES_PER_ATTR_BYTE;
-    const uint8_t tile_offset_y = tile_y % TILES_PER_ATTR_BYTE;
+    const uint8_t tile_offset_x = tile_x_ % TILES_PER_ATTR_BYTE;
+    const uint8_t tile_offset_y = tile_y_ % TILES_PER_ATTR_BYTE;
     
     const uint8_t palette_index_byte = ppu_address_bus_.read(attribute_addr);
 
@@ -251,18 +264,36 @@ NesDisplay::Color NesPPU::fetch_color_from_palette(uint8_t palette_index, uint8_
     // RGB with each represented from 0-7. Scale each component to fill the 0-255 range when
     // generating the NestDisplay color to return.
     // This is the 2C03 palette from the nesdev wiki: https://www.nesdev.org/wiki/PPU_palettes
+    static constexpr int32_t NUM_VALUES = 64;
+
     static constexpr uint16_t COLOR_PALETTE[] =
     {0x333,0x014,0x006,0x326,0x403,0x503,0x510,0x420,0x320,0x120,0x031,0x040,0x022,0x00,0x00,0x00,
      0x555,0x036,0x027,0x407,0x507,0x704,0x700,0x630,0x430,0x140,0x040,0x053,0x044,0x00,0x00,0x00,
      0x777,0x357,0x447,0x637,0x707,0x737,0x740,0x750,0x660,0x360,0x070,0x276,0x077,0x00,0x00,0x00,
      0x777,0x567,0x657,0x757,0x747,0x755,0x764,0x772,0x773,0x572,0x473,0x276,0x467,0x00,0x00,0x00};
 
-    static constexpr uint8_t COLOR_SCALE_FACTOR = 30;
+    static uint16_t SCALED_RED[NUM_VALUES];
+    static uint16_t SCALED_GREEN[NUM_VALUES];
+    static uint16_t SCALED_BLUE[NUM_VALUES];
+    static bool precompute_colortable = true;
+
+    if (precompute_colortable)
+    {
+        static constexpr uint8_t COLOR_SCALE_FACTOR = 31;
+
+        for (int32_t i = 0;i < NUM_VALUES;++i)
+        {
+            SCALED_RED[i] = ((COLOR_PALETTE[i] >> 8) & 0x000F) * COLOR_SCALE_FACTOR;
+            SCALED_GREEN[i] = ((COLOR_PALETTE[i] >> 4) & 0x000F) * COLOR_SCALE_FACTOR;
+            SCALED_BLUE[i] = ((COLOR_PALETTE[i] >> 0) & 0x000F) * COLOR_SCALE_FACTOR;
+        }
+        precompute_colortable = false;
+    }
 
     NesDisplay::Color color;
-    color.r = ((COLOR_PALETTE[palette_value] >> 8) & 0x000F) * COLOR_SCALE_FACTOR;
-    color.g = ((COLOR_PALETTE[palette_value] >> 4) & 0x000F) * COLOR_SCALE_FACTOR;
-    color.b = ((COLOR_PALETTE[palette_value] >> 0) & 0x000F) * COLOR_SCALE_FACTOR;
+    color.r = SCALED_RED[palette_value];
+    color.g = SCALED_GREEN[palette_value];
+    color.b = SCALED_BLUE[palette_value];
     color.a = 0xFF;
     return color;
 }
@@ -505,6 +536,12 @@ void NesPPU::handle_scroll_register()
 void NesPPU::increment_cycle()
 {
     cycle_++;
+
+    if (cycle_ < NesDisplay::WIDTH)
+    {
+        increment_nametable_x_offsets();
+    }
+
     if ( (frame_ % 2 == 0 && cycle_ >= 341) ||
          (frame_ % 2 == 1 && cycle_ >= 340) ) // There are one fewer cycles for odd frames
     {
@@ -516,7 +553,75 @@ void NesPPU::increment_cycle()
             scanline_ = 0;
             frame_++;
         }
+        increment_nametable_y_offsets();
    }
+}
+
+void NesPPU::increment_nametable_x_offsets()
+{
+    tile_x_pixel_++;
+    pixel_x_++;
+
+    if (tile_x_pixel_ == NAMETABLE_TILE_SIZE)
+    {
+        tile_x_pixel_ = 0;
+        tile_x_++;
+        nametable_ptr++;
+
+        if (tile_x_ == NAMETABLE_WIDTH)
+        {
+            tile_x_ = 0;
+
+            nametable_ptr ^= 0x0400;
+            nametable_ptr -= NAMETABLE_WIDTH;
+        }
+    }
+}
+
+void NesPPU::increment_nametable_y_offsets()
+{
+    pixel_x_ = scroll_.first;
+    tile_x_ = (pixel_x_ % 256) / NAMETABLE_TILE_SIZE;
+    tile_x_pixel_ = (pixel_x_ % 256) % NAMETABLE_TILE_SIZE;
+
+    tile_y_pixel_++;
+    pixel_y_++;
+
+    if (tile_y_pixel_ == NAMETABLE_TILE_SIZE)
+    {
+        tile_y_pixel_ = 0;
+        tile_y_++;
+
+        if (tile_y_ == NAMETABLE_HEIGHT)
+        {
+            tile_y_ = 0;
+        }
+    }
+
+    if (scanline_ == 0) // It just rolled around this cycle update
+    {
+        pixel_x_ = scroll_.first;
+        pixel_y_ = scroll_.second;
+
+        uint16_t screen_local_pixel_x = pixel_x_ % 256;
+        uint16_t screen_local_pixel_y = pixel_y_ % 240;
+
+        tile_x_ =       screen_local_pixel_x / NAMETABLE_TILE_SIZE;
+        tile_x_pixel_ = screen_local_pixel_x % NAMETABLE_TILE_SIZE;
+        tile_y_ =       screen_local_pixel_y / NAMETABLE_TILE_SIZE;
+        tile_y_pixel_ = screen_local_pixel_y % NAMETABLE_TILE_SIZE;
+    }
+
+    nametable_ptr = nametable_base_address() + tile_x_ + tile_y_ * NAMETABLE_WIDTH;
+
+    if (pixel_x_ >= 256)
+    {
+        nametable_ptr ^= 0x0400;
+    }
+    if (pixel_y_ >= 240)
+    {
+        nametable_ptr ^= 0x0800;
+    }
 }
 
 bool NesPPU::check_vblank_raising_edge() const
@@ -577,14 +682,11 @@ uint16_t NesPPU::nametable_base_address_for_pixel(uint16_t pixel_x, uint16_t pix
 {
     uint16_t nt_base = cached_nametable_address_;
 
-    uint16_t wrapped_x = pixel_x % 512;
-    uint16_t wrapped_y = pixel_y % 480;
-
-    if (wrapped_x >= 256)
+    if (pixel_x >= 256)
     {
         nt_base ^= 0x0400;
     }
-    if (wrapped_y >= 240)
+    if (pixel_y >= 240)
     {
         nt_base ^= 0x0800;
     }
