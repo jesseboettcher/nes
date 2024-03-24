@@ -4,6 +4,7 @@
 #include "processor/processor_6502.hpp"
 
 #include <ostream>
+#include <queue>
 
 std::ostream& operator << (std::ostream& os, const Instruction& i);
 std::ostream& operator << (std::ostream& os, const AddressBus::View v);

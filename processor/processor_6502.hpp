@@ -16,6 +16,42 @@
 
 #include <glog/logging.h>
 
+class RecentHistory
+{
+public:
+	RecentHistory(int32_t max_size) : max_size_(max_size) {}
+
+	void push(std::string s)
+	{
+		if (history_.size() == max_size_)
+		{
+			history_.pop();
+		}
+		history_.push(s);
+	}
+
+	void write_to_file(std::filesystem::path path)
+	{
+        std::filesystem::remove(path);
+        std::ofstream out_file(path);
+        if (!out_file.is_open())
+        {
+            LOG(WARNING) << "Could not write " << path;
+        }
+
+        while (!history_.empty())
+        {
+            out_file << history_.front();
+            history_.pop();
+        }
+	}
+
+private:
+	int32_t max_size_;
+
+	std::queue<std::string> history_;
+};
+
 struct Registers
 {
 	uint16_t PC;	// program counter
@@ -189,6 +225,7 @@ public:
 	void print_watchpoints();
 	void print_history(const uint16_t num_instructions);
 	void update_execution_log(const Instruction& i, uint16_t previous_pc);
+	void write_history() { history_.write_to_file("/tmp/recent_instructions.log"); }
 
 	const AddressBus& cmemory() { return address_bus_; }
 	const Registers& cregisters() { return registers_; }
@@ -249,8 +286,10 @@ private:
 	std::unordered_map<uint16_t, bool> breakpoints_;
 	std::unordered_map<uint16_t, bool> watchpoints_;
 
-	std::vector<std::string> history_;
+	// std::vector<std::string> history_;
     std::ofstream log_;
+
+    RecentHistory history_;
 };
 
 #endif  // __PROCESSOR_6502_H__

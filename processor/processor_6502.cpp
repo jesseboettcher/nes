@@ -29,6 +29,7 @@ Processor6502::Processor6502(AddressBus& address_bus, bool& nmi_signal, int32_t 
  : address_bus_(address_bus)
  , non_maskable_interrupt_(nmi_signal)
  , internal_memory_size_(internal_memory_size)
+ , history_(100)
 {
     std::cout << "Launching Processor6502...\n";
 
@@ -85,6 +86,12 @@ bool Processor6502::step()
     if (!check_breakpoints())
     {
         // For a breakpoint, exit before changing any processor state
+        return false;
+    }
+
+    if (registers_.PC == 0xFFF0)// && pending_operation_.values[0] == 0xE0)
+    {
+        LOG(INFO) << "aborting early";
         return false;
     }
 
@@ -329,6 +336,8 @@ bool Processor6502::ready_to_execute(const Instruction& pending_op)
     uint8_t opcode = pending_op.opcode();
     if (instr_table_[opcode].addr_mode == AddressingMode::INVALID)
     {
+        history_.write_to_file("/tmp/recent_instructions.log");
+
         LOG(ERROR) << "test valid sig " << std::hex << +address_bus_[0x6001] << " " << +address_bus_[0x6002] << " " << +address_bus_[0x6003];
         LOG(ERROR) << "status " << +address_bus_[0x6000];
         LOG(ERROR) << "Unknown instruction: " << pending_op << " PC: " << registers_.PC << " cycle: " << std::dec << cycle_count_;
@@ -509,7 +518,7 @@ void Processor6502::print_history(const uint16_t num_instructions)
 
     for (int32_t i = 0;i < num_instructions; ++i)
     {
-        std::cout << *(history_.end() - num_instructions + i) << std::endl;
+        // std::cout << *(history_.end() - num_instructions + i) << std::endl;
     }
 }
 
@@ -517,47 +526,48 @@ void Processor6502::update_execution_log(const Instruction& i, uint16_t previous
 {
     if constexpr (ENABLE_CPU_LOGGING)
     {
+        std::stringstream strm;
         // match log format of other emulators for comparisons
         // E684  4C B3 EA  JMP $EAB3                       c14532915    i4977228     A:00 X:00 Y:20 P:27 SP:FC 
 
         // PC
-        log_ << std::hex << std::uppercase
+        strm << std::hex << std::uppercase
              << std::setfill('0') << std::setw(4) << previous_pc << "  ";
 
         // opcode + data
         for (int32_t k = 0;k < instr_table_[i.opcode()].bytes;++k)
         {
-            log_ << std::setw(2) << +i.values[k] << " ";
+            strm << std::setw(2) << +i.values[k] << " ";
         }
         // space
         for (int32_t k = 0;k < 10 - (instr_table_[i.opcode()].bytes * 3);++k)
         {
-            log_ << " ";
+            strm << " ";
         }
 
         // opcode text
-        log_ << std::string(instr_table_[i.opcode()].assembler).substr(0, 3) << " ";
+        strm << std::string(instr_table_[i.opcode()].assembler).substr(0, 3) << " ";
 
         // instruction param
         if (instr_table_[i.opcode()].bytes == 2)
         {
-            log_ << std::setw(4) << std::setfill(' ') << +i.data() << " " << std::setw(2) << std::setfill('0') << +address_bus_.read(i.data()) << " ";
+            strm << std::setw(4) << std::setfill(' ') << +i.data() << " " << std::setw(2) << std::setfill('0') << +address_bus_.read(i.data()) << " ";
         }
         else if (instr_table_[i.opcode()].bytes == 3)
         {
-            log_ << std::setw(4) << std::setfill(' ') << +i.address() << " " << std::setw(2) << std::setfill('0') << +address_bus_.read(i.address()) << " ";
+            strm << std::setw(4) << std::setfill(' ') << +i.address() << " " << std::setw(2) << std::setfill('0') << +address_bus_.read(i.address()) << " ";
         }
         else
         {
-            log_ << std::setw(4) << std::setfill(' ') << std::setw(8) << " ";
+            strm << std::setw(4) << std::setfill(' ') << std::setw(8) << " ";
         }
 
         // counts
-        log_ << std::dec << "c" << std::setw(10) << std::setfill(' ') << std::left << cycle_count_ << std::right << "    ";
-        log_ << "i" << std::setw(10) << std::setfill(' ') << std::left << instr_count_ << std::right << "    ";
+        strm << std::dec << "c" << std::setw(10) << std::setfill(' ') << std::left << cycle_count_ << std::right << "    ";
+        strm << "i" << std::setw(10) << std::setfill(' ') << std::left << instr_count_ << std::right << "    ";
 
         // registers
-        log_ << std::hex << std::uppercase
+        strm << std::hex << std::uppercase
              << "A:" << std::setw(2) << std::setfill('0') << +registers_.A << " "
              << "X:" << std::setw(2) << std::setfill('0') << +registers_.X << " "
              << "Y:" << std::setw(2) << std::setfill('0') << +registers_.Y << " "
@@ -571,6 +581,10 @@ void Processor6502::update_execution_log(const Instruction& i, uint16_t previous
              << (registers_.is_status_register_flag_set(Registers::ZERO_FLAG) ? "Z" : "z")
              << (registers_.is_status_register_flag_set(Registers::CARRY_FLAG) ? "C" : "c") << " "
              << "SP:" << std::uppercase << +registers_.SP << "\n";
+        strm << std::endl;
+
+        history_.push(strm.str());
+        log_ << strm.str();
     }
 }
 

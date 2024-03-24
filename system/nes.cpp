@@ -86,6 +86,7 @@ void Nes::run()
 
     mtr_shutdown();
     mtr_flush();
+    processor_->write_history();
 }
 
 bool Nes::step()

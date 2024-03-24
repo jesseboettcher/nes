@@ -51,6 +51,7 @@ void Cartridge_NROM::write(uint16_t a, uint8_t v)
     if (a >= 0x6000 && a < 0x8000)
     {
         prg_ram_[a % 0x1000] = v;
+        return;
     }
     assert(false);
 }
@@ -121,7 +122,7 @@ uint8_t Cartridge_MMC1::read(uint16_t a) const
 
     if (a >= 0x6000 && a < 0x8000)
     {
-        return prg_ram_[a % 0x1000];
+        return prg_ram_[a];
     }
 
     if (a >= 0x8000 && a < 0x8000 + prg_bank0_.size())
@@ -144,6 +145,12 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
         chr_ram_[a] = v;
     }
 
+    if (a >= 0x6000 && a < 0x8000)
+    {
+        // LOG(INFO) << "write to cartridge ram " << std::hex << "0x" << a << "    " << "0x" << +v;
+        prg_ram_[a] = v;
+    }
+
     if (a >= 0x8000 && a <= 0xFFFF)
     {
         if (v & 0x80) // clear shift register
@@ -158,13 +165,13 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
 
         if (load_write_count_ == 5)
         {
-            // LOG(INFO) << "mmc1 load register " << std::hex << +load_register_ << " address " << a;
             if (a < 0xA000) // control register
             {
                 control_register_ = load_register_;
             }
             else if (a < 0xC000) // chr bank 0 register
             {
+                // this does not support all mapper 001 variants, yet
                 if (!has_chr_ram())
                 {
                     int32_t bank_size = control_register_ & 0x10 ? 0x1000 : 0x2000;
@@ -175,7 +182,6 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
             }
             else if (a < 0xE000) // chr bank 1 register
             {
-                // assert(!has_chr_ram());
                 chr_bank1_register_ = load_register_;
 
                 if (control_register_ & 0x10)
@@ -188,6 +194,9 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
                 {
                     chr_bank1_ = std::span<uint8_t>();
                 }
+
+                uint8_t prg_ram_bank = (chr_bank1_register_ & 0x0C) >> 2;
+                LOG(INFO) << "set prg_ram_bank " << +prg_ram_bank;
             }
             else // prg bank register
             {
@@ -199,21 +208,21 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
                     case 1:
                     {
                         int32_t bank_size = 0x8000;
-                        prg_bank0_ = prg_rom(pgr_bank_register_ * 0x4000, bank_size);
+                        prg_bank0_ = prg_rom((pgr_bank_register_ & 0x0F) * 0x4000, bank_size);
                         break;
                     }
 
                     case 3:
                     {
                         int32_t bank_size = 0x4000;
-                        prg_bank0_ = prg_rom(pgr_bank_register_ * 0x4000, bank_size);
+                        prg_bank0_ = prg_rom((pgr_bank_register_ & 0x0F) * 0x4000, bank_size);
                         break;
                     }
 
                     case 4:
                     {
                         int32_t bank_size = 0x4000;
-                        prg_bank0_ = prg_rom(pgr_bank_register_ * 0x4000, bank_size);
+                        prg_bank0_ = prg_rom((pgr_bank_register_ & 0x0F) * 0x4000, bank_size);
                         break;
                     }
                 }

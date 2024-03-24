@@ -429,6 +429,31 @@ static uint8_t DEC(const Instruction& i, Registers& r, AddressBus& m)
     return 0;
 }
 
+static uint8_t DCP(const Instruction& i, Registers& r, AddressBus& m)
+{
+    // DEC
+    // M - 1 -> M
+    // N   Z   C   I   D   V
+    // +   +   -   -   -   -
+
+    m.write(i.address(), m[i.address()] - 1);
+
+    // CMP
+    // Y - M
+    // N    Z   C   I   D   V
+    // +    +   +   -   -   -
+    uint8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : m.read(i.address());
+    uint8_t extra_cycles_used = i.fetch_crossed_page_boundary ? 1 : 0;
+
+    uint8_t difference = r.A - data;
+
+    r.set_status_register_flag(Registers::CARRY_FLAG, r.A >= data);
+    r.set_status_register_flag(Registers::ZERO_FLAG, difference == 0);
+    r.set_status_register_flag(Registers::NEGATIVE_FLAG, difference & 0x80);
+
+    return extra_cycles_used;
+}
+
 static uint8_t DEX(const Instruction& i, Registers& r, AddressBus& m)
 {
     // X - 1 -> X
@@ -959,6 +984,13 @@ static uint8_t TYA(const Instruction& i, Registers& r, AddressBus& m)
     return 0;
 }
 
+static uint8_t UNOFFICIAL(const Instruction& i, Registers&, AddressBus&)
+{
+    // Unofficial, unimplemented opcode
+    LOG(INFO) << "Unimplemented unofficial opcode " << std::hex << "0x" << +i.opcode();
+    return 0;
+}
+
 static std::array INSTRUCTION_DETAILS = std::to_array<InstructionDetails>(
 {
     // source: https://www.masswerk.at/6502/6502_instruction_set.html#TSX
@@ -1020,6 +1052,7 @@ static std::array INSTRUCTION_DETAILS = std::to_array<InstructionDetails>(
     { "CPY oper",       0xCC,   3,      4,      AddressingMode::ABSOLUTE,           CPY },
     { "DEC oper",       0xC6,   2,      5,      AddressingMode::ZERO_PAGE,          DEC },
     { "DEC oper,X",     0xD6,   2,      6,      AddressingMode::ZERO_PAGE_X,        DEC },
+    { "DCP oper,X",     0xD7,   2,      6,      AddressingMode::ZERO_PAGE_X,        DCP }, // unofficial
     { "DEC oper",       0xCE,   3,      6,      AddressingMode::ABSOLUTE,           DEC },
     { "DEC oper,X",     0xDE,   3,      7,      AddressingMode::ABSOLUTE_X,         DEC },
     { "DEX",            0xCA,   1,      2,      AddressingMode::IMPLIED,            DEX },
