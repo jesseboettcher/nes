@@ -578,8 +578,9 @@ static uint8_t LDA(const Instruction& i, Registers& r, AddressBus& m)
     // N    Z   C   I   D   V
     // +    +   -   -   -   -
 
-    const AddressBus& cm = m;
-    int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
+    int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ?
+                  i.data() :
+                  m.read(i.address(), AddressBus::AccessType::READ);
 
     r.A = data;
 
@@ -595,8 +596,9 @@ static uint8_t LDX(const Instruction& i, Registers& r, AddressBus& m)
     // N    Z   C   I   D   V
     // +    +   -   -   -   -
 
-    const AddressBus& cm = m;
-    int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
+    int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ?
+                  i.data() :
+                  m.read(i.address(), AddressBus::AccessType::READ);
 
     r.X = data;
 
@@ -612,8 +614,10 @@ static uint8_t LDY(const Instruction& i, Registers& r, AddressBus& m)
     // N    Z   C   I   D   V
     // +    +   -   -   -   -
 
-    const AddressBus& cm = m;
-    int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ? i.data() : cm[i.address()];
+    int8_t data = (i.addr_mode == AddressingMode::IMMEDIATE) ?
+                  i.data() :
+                  m.read(i.address(), AddressBus::AccessType::READ);
+
 
     r.Y = data;
 

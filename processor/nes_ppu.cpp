@@ -64,15 +64,25 @@ bool NesPPU::step()
     {
         if (cycle_ < NesDisplay::WIDTH) // TODO proper timing
         {
-            render_pixel();
+            if (registers_[PPUMASK] & PPUMASK_BACKGROUND)
+            {
+                render_pixel();
+            }
         }
     }
 
     if (check_rendering_falling_edge())
     {
-        render_sprites(Sprite::Layer::Foreground); // TODO integrate with proper timing and background rendering
+        if (registers_[PPUMASK] & PPUMASK_SPRITES)
+        {
+            render_sprites(Sprite::Layer::Foreground); // TODO integrate with proper timing and background rendering
+        }
 
-        display_.render();
+
+        if (is_rendering_enabled())
+        {
+            display_.render();
+        }
     }
 
     if (check_vblank_raising_edge()) // vsync
@@ -82,14 +92,23 @@ bool NesPPU::step()
         if (registers_[PPUCTRL] & PPUCTRL_Generate_NMI)
         {
             nmi_signal_ = true;
-            display_.clear_screen(fetch_color_from_palette(0, 0)); // background color
+        }
+
+        {
+            if (registers_[PPUMASK] & PPUMASK_BACKGROUND)
+            {
+                display_.clear_screen(fetch_color_from_palette(0, 0)); // background color
+            }
 
             cached_nametable_address_ = nametable_base_address();
             cached_patterntable_address = pattern_table_base_address();
 
-            read_sprite_oam(); // TODO proper timing for reading oam
-            render_sprites(Sprite::Layer::Background); // TODO integrate with proper timing and background rendering
-        }   
+            if (registers_[PPUMASK] & PPUMASK_SPRITES)
+            {
+                read_sprite_oam(); // TODO proper timing for reading oam
+                render_sprites(Sprite::Layer::Background); // TODO integrate with proper timing and background rendering
+            }
+        }
     }
 
     if (check_vblank_falling_edge())
@@ -103,29 +122,47 @@ bool NesPPU::step()
     return true;
 }
 
-uint8_t NesPPU::read_register(uint16_t a)
+uint8_t NesPPU::peek_register(uint16_t a)
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
-
-    if (a == PPUSTATUS)
-    {
-        write_latch_ = 0;
-    }
 
     return registers_[a];
 }
 
-uint8_t& NesPPU::write_register(uint16_t a)
+uint8_t NesPPU::read_register(uint16_t a)
+{
+    assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
+
+    uint8_t result = registers_[a];
+
+    if (a == PPUSTATUS)
+    {
+        write_latch_ = 0;
+        registers_[a] &= ~PPUSTATUS_vblank;
+    }
+
+    return result;
+}
+
+void NesPPU::write_register(uint16_t a, uint8_t v)
 {
     assert(a == 0x4014 || (a >= 0x2000 && a <= 0x2007));
 
     if (a == OAMDMA)
     {
-        return oam_dma_register_.write();
+        oam_dma_register_.write(v);
+        return;
+    }
+    registers_.set_had_write(a);
+
+    if (a == PPUSTATUS)
+    {
+        // VBL flag should not be affected by write to PPUSTATUS
+        registers_[a] |= v & ~PPUSTATUS_vblank;
+        return;
     }
 
-    registers_.set_had_write(a);
-    return registers_[a];
+    registers_[a] = v;
 }
 
 void NesPPU::render_pixel()
@@ -542,8 +579,9 @@ void NesPPU::increment_cycle()
         increment_nametable_x_offsets();
     }
 
-    if ( (frame_ % 2 == 0 && cycle_ >= 341) ||
-         (frame_ % 2 == 1 && cycle_ >= 340) ) // There are one fewer cycles for odd frames
+    if ( (cycle_ >= 341) ||
+        // There is one fewer cycle for odd frames when rendering is enabled
+         (is_rendering_enabled() && (frame_ % 2 == 1 && cycle_ >= 340)) )
     {
         cycle_ = 0;
         scanline_++;
@@ -642,6 +680,11 @@ bool NesPPU::is_rendering_scanline() const
 bool NesPPU::check_rendering_falling_edge() const
 {
     return (scanline_ == 239 && cycle_ == 340);
+}
+
+bool NesPPU::is_rendering_enabled() const
+{
+    return registers_[PPUMASK] & PPUMASK_BACKGROUND || registers_[PPUMASK] & PPUMASK_SPRITES;
 }
 
 uint16_t NesPPU::pattern_table_base_address()

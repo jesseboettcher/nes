@@ -23,6 +23,7 @@ public:
         NONE,
         READ,
         WRITE,
+        PEEK
     };
 
     static constexpr int32_t ADDRESSABLE_MEMORY_SIZE = 64 * 1024;
@@ -67,7 +68,7 @@ public:
     {
     }
 
-    const uint8_t read(int32_t a) const;
+    const uint8_t read(int32_t a, AccessType access = AccessType::PEEK) const;
 
     // returns reference to memory to be written
     void write(int32_t a, uint8_t value);

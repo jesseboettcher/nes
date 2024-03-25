@@ -56,10 +56,10 @@ public:
         uint8_t value() { return value_; }
         bool had_write() { return had_write_; }
 
-        uint8_t& write()
+        void write(uint8_t v)
         {
             had_write_ = true;
-            return value_;
+            value_ = v;
         }
 
         void clear_write_flag()
@@ -160,8 +160,9 @@ public:
     bool step();
 
     // Accessors for the PPU registers from AddressBus
+    uint8_t peek_register(uint16_t a);
     uint8_t read_register(uint16_t a);
-    uint8_t& write_register(uint16_t a);
+    void write_register(uint16_t a, uint8_t v);
 
     const PPUAddressBus& cmemory() { return ppu_address_bus_; }
 
@@ -236,6 +237,7 @@ private:
     bool check_vblank_falling_edge() const;
     bool is_rendering_scanline() const;
     bool check_rendering_falling_edge() const;
+    bool is_rendering_enabled() const;
 
     // amount to increment PPUADDR after a write to PPUDATA
     uint16_t ppu_addr_increment_amount();

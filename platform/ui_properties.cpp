@@ -53,7 +53,7 @@ void update_ui_memory_view(const AddressBus& m)
     for (int32_t i = 0;i < AddressBus::ADDRESSABLE_MEMORY_SIZE;++i)
     {
         memstr << std::hex << std::setfill('0') << std::setw(2);
-        memstr << static_cast<uint32_t>(m[i]) << " ";
+        memstr << static_cast<uint32_t>(m.read(i)) << " ";
 
         if (i % BYTES_PER_LINE == 0)
         {

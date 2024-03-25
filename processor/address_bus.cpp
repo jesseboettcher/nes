@@ -3,7 +3,7 @@
 #include "processor/processor_6502.hpp"
 
 
-const uint8_t AddressBus::read(int32_t a) const
+const uint8_t AddressBus::read(int32_t a, AccessType access) const
 {
     assert(a >= 0 && a < ADDRESSABLE_MEMORY_SIZE);
 
@@ -13,7 +13,8 @@ const uint8_t AddressBus::read(int32_t a) const
     }
     else if (a <= 0x3FFF) // PPU registers, mirrored after 0x2000 - 0x2007
     {
-        return ppu_->read_register(0x2000 + (a % 8));
+        return access == AccessType::READ ? ppu_->read_register(0x2000 + (a % 8)) :
+                                            ppu_->peek_register(0x2000 + (a % 8));
     }
     else if (a <= 0x4017) // APU, IO registers
     {
@@ -23,7 +24,8 @@ const uint8_t AddressBus::read(int32_t a) const
         }
         if (a == 0x4014) // OAM DMA
         {
-            return ppu_->read_register(a);
+            return access == AccessType::READ ? ppu_->read_register(a) :
+                                                ppu_->peek_register(a);
         }
 
         // APU
@@ -53,7 +55,7 @@ void AddressBus::write(int32_t a, uint8_t value)
     }
     else if (a <= 0x3FFF) // PPU registers, mirrored after 0x2000 - 0x2007
     {
-        ppu_->write_register(0x2000 + (a % 8)) = value;
+        ppu_->write_register(0x2000 + (a % 8), value);
     }
     else if (a <= 0x4017) // APU, IO registers
     {
@@ -63,7 +65,7 @@ void AddressBus::write(int32_t a, uint8_t value)
         }
         else if (a == 0x4014) // OAM DMA
         {
-            ppu_->write_register(a) = value;
+            ppu_->write_register(a, value);
         }
         else
         {
