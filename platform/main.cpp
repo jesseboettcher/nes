@@ -164,6 +164,11 @@ void create_menus()
 
     QAction *tests_action = new QAction("Run Processor Tests", ui.menu_bar);
 
+    QAction *snapshots_action = new QAction("Log Snapshots", ui.menu_bar);
+    snapshots_action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_4));
+    snapshots_action->setCheckable(true);
+    snapshots_action->setChecked(false);
+
     debug_menu->addAction(run_action);
     debug_menu->addAction(step_action);
     debug_menu->addAction(stop_action);
@@ -171,6 +176,7 @@ void create_menus()
     debug_menu->addAction(goto_mem_action);
     debug_menu->addAction(cmd_action);
     debug_menu->addSeparator();
+    debug_menu->addAction(snapshots_action);
     debug_menu->addAction(tests_action);
 
     QObject::connect(run_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::run);
@@ -179,6 +185,7 @@ void create_menus()
     QObject::connect(goto_mem_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::goto_memory);
     QObject::connect(cmd_action,  &QAction::triggered, &ui.menu_handler, &MenuHandler::command);
     QObject::connect(tests_action, &QAction::triggered, &ui.menu_handler, &MenuHandler::run_processor_tests);
+    QObject::connect(snapshots_action, &QAction::triggered, &ui.menu_handler, &MenuHandler::snapshots);
 
     // Window menu
     QMenu *window_menu = ui.menu_bar->addMenu("Window");

@@ -1,5 +1,6 @@
 #include "platform/menu_handler.hpp"
 
+#include "config/constants.hpp"
 #include "io/cartridge.hpp"
 #include "io/prompt.hpp"
 #include "platform/ui_context.hpp"
@@ -110,6 +111,18 @@ void MenuHandler::command()
         Qt::WindowFlags()        // Window flags
     );
     CommandPrompt::instance().write_command(text.toStdString());
+}
+
+void MenuHandler::snapshots()
+{
+    static bool snapshots_enabled = false;
+
+    snapshots_enabled = !snapshots_enabled;
+
+    UIContext::instance().nes->configure_capture_snapshots(SNAPSHOTS_OUTPUT_PATH,
+                                                           snapshots_enabled ?
+                                                           std::chrono::milliseconds(250) :
+                                                           std::chrono::milliseconds(0));
 }
 
 void MenuHandler::run_processor_tests()

@@ -23,10 +23,12 @@ public:
 
     Joypads();
 
-    void step();
+    void step(uint64_t clock_ticks);
 
     uint8_t read(uint16_t a) const;
     uint8_t& write(uint16_t a);
+
+    uint64_t last_press_clock_ticks() { return last_press_clock_ticks_; }
 
 private:
     uint8_t read(std::queue<bool>& snapshot) const;
@@ -46,4 +48,6 @@ private:
 
     mutable std::queue<bool> joypad_1_snapshot_;
     mutable std::queue<bool> joypad_2_snapshot_;
+
+    uint64_t last_press_clock_ticks_{0};
 };

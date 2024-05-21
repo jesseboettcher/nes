@@ -8,10 +8,16 @@
 #include <thread>
 
 #include <glog/logging.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 Nes::Nes(std::shared_ptr<Cartridge> cartridge)
 : cartridge_(nullptr)
 , display_()
+, snapshot_interval_ticks_(0)
+, last_snapshot_ticks_(0)
+, last_button_triggered_snapshot_ticks_(0)
 {
     std::cout << "Launching Nes...\n";
 
@@ -99,13 +105,14 @@ bool Nes::step()
 
     if (clock_ticks_ % 12 == 0)
     {
-        joypads_->step();
+        joypads_->step(clock_ticks_);
         should_continue = processor_->step();
     }
     if (clock_ticks_ % 24 == 0)
     {
         apu_->step(clock_ticks_);
     }
+    check_capture_snapshot();
 
     return should_continue;
 }
@@ -135,6 +142,101 @@ void Nes::user_interrupt()
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+}
+
+void Nes::check_capture_snapshot()
+{
+    if (snapshot_interval_ticks_ == 0)
+    {
+        return;
+    }
+
+    bool button_change = false;
+
+    if (joypads_->last_press_clock_ticks() - last_button_triggered_snapshot_ticks_ >
+        int64_t(21477272 * (100.0 / 1000.0))) // 250ms interval
+    {
+        button_change = true;
+        last_button_triggered_snapshot_ticks_ = joypads_->last_press_clock_ticks();
+    }
+
+    if (button_change ||
+        (clock_ticks_ - last_snapshot_ticks_ > snapshot_interval_ticks_))
+    {
+        last_snapshot_ticks_ = clock_ticks_;
+
+        // write snapshot
+        std::scoped_lock lock(display_.display_buffer_lock());
+
+        QImage image((const uchar*)display_.display_buffer(),
+                     NesDisplay::WIDTH, NesDisplay::HEIGHT,
+                     QImage::Format_RGBA8888);
+
+        std::stringstream ts;
+        {
+            auto now = std::chrono::system_clock::now();
+            auto now_as_time_t = std::chrono::system_clock::to_time_t(now);
+
+            auto duration = now.time_since_epoch();
+            auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+            ts << std::put_time(std::localtime(&now_as_time_t), "%Y-%m-%d_%H.%M.%S.");
+            ts << std::setw(3) << std::setfill('0') << milliseconds % 1000;  // extract milliseconds part
+        }
+
+        std::stringstream file_basename;;
+        file_basename << "nes_screenshot_" << ts.str();
+
+        std::stringstream img_path;
+        img_path << snapshots_directory_ << file_basename.str() << ".png";
+
+        bool success = image.save(img_path.str().c_str(), "PNG");
+
+        LOG_IF(ERROR, !success) << "failed to write snapshot";
+
+        // write metadata
+        std::stringstream metadata_path;
+        metadata_path << snapshots_directory_ << file_basename.str() << ".json";
+
+        json j;
+        j["timestamp"] = ts.str();
+        j["image"] = std::string(file_basename.str() + ".png");
+        j["buttons"] = json::object();
+
+        j["buttons"]["up"]      = is_button_pressed(Joypads::Button::Up);
+        j["buttons"]["down"]    = is_button_pressed(Joypads::Button::Down);
+        j["buttons"]["left"]    = is_button_pressed(Joypads::Button::Left);
+        j["buttons"]["right"]   = is_button_pressed(Joypads::Button::Right);
+        j["buttons"]["a"]       = is_button_pressed(Joypads::Button::A);
+        j["buttons"]["b"]       = is_button_pressed(Joypads::Button::B);
+        j["buttons"]["select"]  = is_button_pressed(Joypads::Button::Select);
+        j["buttons"]["start"]   = is_button_pressed(Joypads::Button::Start);
+
+        std::ofstream metadata_output(metadata_path.str());
+        metadata_output << j.dump(4);
+        LOG(INFO) << "snapshot " << file_basename.str();
+    }
+}
+
+void Nes::configure_capture_snapshots(std::string_view path, std::chrono::milliseconds interval)
+{
+    if (interval.count() == 0)
+    {
+        snapshot_interval_ticks_ = 0;
+        return; // disable
+    }
+
+    if (interval.count() <= 30)
+    {
+        LOG(WARNING) << "configure_capture_snapshots: interval is to short. Must be > 30";
+        return; // too fast
+    }
+
+    snapshots_directory_ = path;
+
+    // ticks per second / fraction of a second of interval
+    snapshot_interval_ticks_ = static_cast<uint64_t>(21477272 * (interval.count() / 1000.0));
+    LOG(INFO) << "interval " << snapshot_interval_ticks_;
 }
 
 void Nes::adjust_emulation_speed()

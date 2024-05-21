@@ -196,7 +196,7 @@ void Cartridge_MMC1::write(uint16_t a, uint8_t v)
                 }
 
                 uint8_t prg_ram_bank = (chr_bank1_register_ & 0x0C) >> 2;
-                LOG(INFO) << "set prg_ram_bank " << +prg_ram_bank;
+                // LOG(INFO) << "set prg_ram_bank " << +prg_ram_bank;
             }
             else // prg bank register
             {

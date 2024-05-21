@@ -44,6 +44,11 @@ public:
     void shutdown() { user_interrupt(); }
 
     void sound_test() { apu_->test(); }
+
+    // Snapshots consist of screenshots and a corresponding json file that includes the
+    // state of joypad buttons.
+    void configure_capture_snapshots(std::string_view path, std::chrono::milliseconds interval);
+    void check_capture_snapshot();
     
 protected:
 	friend class CommandPrompt;
@@ -76,4 +81,9 @@ private:
 
     std::atomic<State> state_{State::IDLE};
     std::atomic<bool> should_exit_{false};
+
+    uint64_t snapshot_interval_ticks_;
+    uint64_t last_snapshot_ticks_;
+    uint64_t last_button_triggered_snapshot_ticks_;
+    std::string snapshots_directory_;
 };

@@ -14,7 +14,7 @@ Joypads::Joypads()
     data(JOYPAD2) = 0x00;
 }
 
-void Joypads::step()
+void Joypads::step(uint64_t clock_ticks)
 {
     // memory view bypasses the peripheral connection, so we can see
     // what the program has written to memory instead of getting what
@@ -51,8 +51,15 @@ void Joypads::step()
 
             // add the buttons in the order they must be returned
             // (element 0 will need to be returned first)
-            joypad_1_snapshot_.push(is_button_pressed(b));
+            bool pressed = is_button_pressed(b);
+
+            joypad_1_snapshot_.push(pressed);
             joypad_2_snapshot_.push(false); // TODO joypad 2 unimplemented
+
+            if (pressed)
+            {
+                last_press_clock_ticks_ = clock_ticks;
+            }
         }
     }
 }
