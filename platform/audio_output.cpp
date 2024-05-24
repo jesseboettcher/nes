@@ -175,6 +175,7 @@ private:
 Generator::Generator(const QAudioFormat &format)
  : sema_(0)
  , output_buffer_(1024*32)
+ , shutdown_(false)
 {
     assert(QAudioFormat::Int16 == format.sampleFormat());
 
@@ -205,12 +206,15 @@ void Generator::start()
 
 void Generator::stop()
 {
+    shutdown_ = true;
     close();
+
+    producer_->join();
 }
 
 void Generator::producer_loop()
 {
-    while (true)
+    while (!shutdown_)
     {
         bool success = sema_.try_acquire_for(std::chrono::milliseconds(1000));
 

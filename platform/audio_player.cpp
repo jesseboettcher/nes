@@ -32,6 +32,11 @@ AudioPlayer::AudioPlayer()
     }
 }
 
+AudioPlayer::~AudioPlayer()
+{
+    generator_->stop();
+}
+
 void AudioPlayer::update_parameters(Audio::Channel channel, Audio::Parameters params, bool reset_phase)
 {
     if constexpr (ENABLE_APU_PARAMETERS_LOGGING)

@@ -161,4 +161,6 @@ private:
     std::mutex output_lock_;
     int32_t samples_per_step_; // 60hz
     CircularBuffer<uint16_t> output_buffer_;
+
+    bool shutdown_;
 };

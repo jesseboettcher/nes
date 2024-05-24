@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package agent_interface;
+
+enum Button
+{
+    // order is important. this matches Joypads::Button, which matches the order that the buttons
+    // are read by the cpu
+    A 		= 0;
+    B 		= 1;
+    Select	= 2;
+    Start	= 3;
+    Up 		= 4;
+    Down	= 5;
+    Left 	= 6;
+    Right 	= 7;
+}
+
+message ButtonPress
+{
+	uint64 timestamp 				= 1;
+	uint32 sequence_number 			= 2;
+	repeated bool pressed_buttons 	= 3;
+}
+
+message Screenshot
+{
+	uint64 timestamp 		= 1;
+	uint32 sequence_number 	= 2;
+	repeated bytes png_data = 3;
+}

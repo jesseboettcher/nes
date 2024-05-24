@@ -1,5 +1,6 @@
 #pragma once
 
+#include "agent/agent_interface.hpp"
 #include "io/cartridge.hpp"
 #include "io/display.hpp"
 #include "io/files.hpp"
@@ -50,6 +51,10 @@ public:
     void configure_capture_snapshots(std::string_view path, std::chrono::milliseconds interval);
     void check_capture_snapshot();
     
+	void check_send_screenshot_to_agent();
+
+    std::shared_ptr<AgentInterface> agent_interface() { return agent_interface_; }
+
 protected:
 	friend class CommandPrompt;
 	Processor6502& processor() { return *processor_; }
@@ -79,6 +84,8 @@ private:
 	std::shared_ptr<Joypads> joypads_;
 	bool nmi_signal_{false};
 
+	std::shared_ptr<AgentInterface> agent_interface_;
+
     std::atomic<State> state_{State::IDLE};
     std::atomic<bool> should_exit_{false};
 
@@ -86,4 +93,6 @@ private:
     uint64_t last_snapshot_ticks_;
     uint64_t last_button_triggered_snapshot_ticks_;
     std::string snapshots_directory_;
+
+    uint64_t last_agent_screenshot_ticks_;
 };

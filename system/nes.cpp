@@ -41,11 +41,12 @@ Nes::Nes(std::shared_ptr<Cartridge> cartridge)
     // start the audio right away, it will play empty samples until something is pushed
     // this needs to be called from the UI thread
     apu_->start();
+
+    agent_interface_ = std::make_shared<AgentInterface>();
 }
 
 Nes::~Nes()
 {
-
 }
 
 bool Nes::load_cartridge(std::shared_ptr<Cartridge> cartridge)
@@ -113,6 +114,7 @@ bool Nes::step()
         apu_->step(clock_ticks_);
     }
     check_capture_snapshot();
+    check_send_screenshot_to_agent();
 
     return should_continue;
 }
@@ -237,6 +239,41 @@ void Nes::configure_capture_snapshots(std::string_view path, std::chrono::millis
     // ticks per second / fraction of a second of interval
     snapshot_interval_ticks_ = static_cast<uint64_t>(21477272 * (interval.count() / 1000.0));
     LOG(INFO) << "interval " << snapshot_interval_ticks_;
+}
+
+void Nes::check_send_screenshot_to_agent()
+{
+    if (clock_ticks_ - last_agent_screenshot_ticks_ <
+        int64_t(21477272 * (500.0 / 1000.0))) // 500ms interval
+    {
+        return;
+    }
+
+    if (!agent_interface_->any_connections())
+    {
+        return;
+    }
+    last_agent_screenshot_ticks_ = clock_ticks_;
+
+    std::scoped_lock lock(display_.display_buffer_lock());
+
+    std::vector<int8_t> image_data;
+    {
+        QImage image((const uchar*)display_.display_buffer(),
+                     NesDisplay::WIDTH, NesDisplay::HEIGHT,
+                     QImage::Format_RGBA8888);
+
+        QByteArray byte_array;
+        QBuffer buffer(&byte_array);
+        buffer.open(QIODevice::WriteOnly);
+
+        image.save(&buffer, "PNG");
+
+        image_data = std::vector<int8_t>(byte_array.begin(), byte_array.end());
+        LOG(INFO) << "qbytearray size " << byte_array.size() << " " << image_data.size();
+    }
+
+    agent_interface_->send_screenshot(std::move(image_data));
 }
 
 void Nes::adjust_emulation_speed()

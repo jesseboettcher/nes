@@ -5,6 +5,12 @@
 .DS_Store
 ._*
 
+# python
+__pycache__
+
+# protobuf generated python
+*pb2.py
+
 # build files
 build/
 build-*/

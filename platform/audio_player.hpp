@@ -14,6 +14,7 @@ class AudioPlayer
 {
 public:
     AudioPlayer();
+    ~AudioPlayer();
 
     // Needs to be called from the QT UI thread. Easiest to call once at startup and let run.
     void start();

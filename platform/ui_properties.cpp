@@ -191,5 +191,6 @@ bool is_button_pressed(Joypads::Button button)
 
 
     return ui.main_window->is_key_pressed(button_to_key_map.at(button)) ||
-           joypad_input->is_button_pressed(button);
+           joypad_input->is_button_pressed(button) ||
+           ui.nes->agent_interface()->is_button_pressed(button);
 }

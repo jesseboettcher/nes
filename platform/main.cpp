@@ -1,4 +1,5 @@
 #include "io/display.hpp"
+#include "io/prompt.hpp"
 #include "platform/menu_handler.hpp"
 #include "platform/ui_controller.hpp"
 #include "platform/ui_context.hpp"
@@ -248,5 +249,10 @@ int main(int argc, char *argv[])
 
     init_joypad_input();
 
-    return app.exec();
+    auto r = app.exec();
+
+    UIContext::instance().nes = nullptr;
+    CommandPrompt::instance().shutdown();
+
+    return r;
 }
